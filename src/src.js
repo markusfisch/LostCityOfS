@@ -1,76 +1,57 @@
 "use strict"
 
-let centerX, centerY, hasTouch
+let ctx, hasTouch, objects
 
-function transform(x, y, size, deg) {
-	return `translate(${
-		centerX - 50 + (x || 0)}px, ${
-		centerY - 50 + (y || 0)}px) rotateZ(${
-		deg || 0}deg) scale(${size || 1})`
-}
-
-function set(e, x, y, size, deg) {
-	size = size || 1
-	// Transform origin at runtime to keep sprite coordinates in the
-	// 0-99 range. If the source is centered at 0/0, there are minus
-	// signs that make the values a tiny bit worse to compress.
-	e.style.transformOrigin = "50px 50px"
-	e.style.transform = `translate(${
-		centerX - 50 + (x || 0)}px, ${
-		centerY - 50 + (y || 0)}px) rotateZ(${
-		deg || 0}deg) scale(${size})`
-}
-
-function clone(e, x, y, size, deg) {
-	const c = e.cloneNode(true)
-	c.id = null
-	set(c, x, y, size, deg)
-	return c
-}
-
-function show() {
-	S.innerHTML = ""
-	S.appendChild(clone(Plane))
-	for (let i = 1000; i-- > 0;) {
-		const size = .5,
-			x = Math.round(Math.random() * 100) - centerX,
-			y = Math.round(Math.random() * 100) - centerY,
-			e = clone(Grass, x, y, size, -22),
-			origin = e.style.transform
-		e.animate(
-			[
-				{transform: origin},
-				{transform: transform(x, y, size, 22)},
-				{transform: origin},
-			], {
-				duration: 5000,
-				fill: "forwards",
-				iterations: Infinity,
-			}
-		).play()
-		S.appendChild(e)
+function render() {
+	requestAnimationFrame(render)
+	const now = Date.now()
+	ctx.fillStyle = "rgb(40, 160, 140)"
+	ctx.fillRect(0, 0, ctx.width, ctx.height)
+	for (let i = 0; i < 1000; ++i) {
+		const o = objects[i]
+		ctx.save()
+		ctx.translate(o.x, o.y)
+		ctx.rotate(Math.sin(now * .001))
+		ctx.fillStyle = "#fff"
+		ctx.beginPath()
+		ctx.moveTo(0, -40)
+		ctx.lineTo(-10, 0)
+		ctx.lineTo(10, 0)
+		ctx.fill()
+		ctx.restore()
 	}
 }
 
 function resize() {
 	const windowWidth = window.innerWidth,
 		windowHeight = window.innerHeight,
-		min = Math.min(windowWidth, windowHeight),
-		ratio = min / 100,
-		stageWidth = windowWidth / ratio,
-		stageHeight = windowHeight / ratio
+		canvas = document.getElementById("C")
 
-	centerX = stageWidth >> 1
-	centerY = stageHeight >> 1
+	if (!ctx) {
+		ctx = canvas.getContext("2d")
+		ctx.ratio = (window.devicePixelRatio || 1) /
+			(ctx.webkitBackingStorePixelRatio ||
+				ctx.mozBackingStorePixelRatio ||
+				ctx.msBackingStorePixelRatio ||
+				ctx.oBackingStorePixelRatio ||
+				ctx.backingStorePixelRatio ||
+				1)
+	}
+	ctx.width = Math.round(windowWidth * ctx.ratio)
+	ctx.height = Math.round(windowHeight * ctx.ratio)
 
-	const style = S.style
-	style.width = stageWidth + "px"
-	style.height = stageHeight + "px"
-	style.transformOrigin = "top left"
-	style.transform = `scale(${ratio})`
-	style.display = "block"
+	canvas.width = ctx.width
+	canvas.height = ctx.height
+	canvas.style.width = windowWidth + "px"
+	canvas.style.height = windowHeight + "px"
 
-	show()
+	objects = []
+	for (let i = 0; i < 1000; ++i) {
+		objects.push({
+			x: Math.round(Math.random() * canvas.width),
+			y: Math.round(Math.random() * canvas.height),
+		})
+	}
 }
 
 window.onload = function() {
@@ -88,4 +69,5 @@ window.onload = function() {
 	}
 	window.onresize = resize
 	resize()
+	render()
 }

@@ -21,21 +21,14 @@ body {
 	-ms-touch-action: none;
 	user-select: none;
 }
-svg {
-	display: none;
+canvas {
+	position: fixed;
+	left: 0; top: 0;
 }
 </style>
 </head>
 <body>
 </body>
-<svg id="A">
-<g id="Plane">
-	<rect width="300" height="300" style="fill: rgb(40, 160, 140);" y="-100" x="-100"/>
-</g>
-<g id="Grass">
-	<path style="fill: rgb(255, 255, 255);" d="M 50 45 L 51 50 L 49 50 Z"/>
-</g>
-</svg>
-<svg id="S"></svg>
+<canvas id="C">Sorry, this browser cannot render this content.</canvas>
 <script src="src.js"></script>
 </html>
