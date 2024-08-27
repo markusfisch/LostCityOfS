@@ -23,12 +23,52 @@ body {
 }
 canvas {
 	position: fixed;
-	left: 0; top: 0;
+	width: 100%;
+	height: 100%;
+}
+svg {
+	display: none;
 }
 </style>
 </head>
 <body>
 </body>
 <canvas id="C">Sorry, this browser cannot render this content.</canvas>
+<svg id="A">
+<g>
+	<path style="fill: rgb(255, 255, 255);" d="M 0 0 L 99 0 L 50 99 Z"/>
+</g>
+<g>
+	<path style="fill: rgb(0, 0, 0);" d="M 0 0 L 0 99 L 99 50 Z"/>
+</g>
+</svg>
+<script id="VertexShader" type="x-shader/x-vertex">
+attribute vec2 v;
+attribute vec2 t;
+
+uniform vec2 c;
+
+varying vec2 u;
+
+void main() {
+	u = t;
+	gl_Position = vec4(v + c, 0., 1.);
+}
+</script>
+<script id="FragmentShader" type="x-shader/x-fragment">
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+
+varying vec2 u;
+
+uniform sampler2D s;
+
+void main() {
+	gl_FragColor = texture2D(s, u).rgba;
+}
+</script>
 <script src="src.js"></script>
 </html>
