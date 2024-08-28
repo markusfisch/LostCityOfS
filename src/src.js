@@ -155,55 +155,51 @@ function loadAtlas(onload) {
 }
 
 function Renderer(atlas) {
-	let camLoc, verts, xscale, yscale, xrad, yrad
-
 	const elementsPerVertex = 4,
-		nudge = .5 / atlas.canvas.width,
 		bufferData = new Float32Array(1024 * 64 * elementsPerVertex),
-		gl = document.getElementById('C').getContext('webgl')
+		gl = document.getElementById('C').getContext('webgl'),
+		tx = gl.createTexture(),
+		program = gl.createProgram()
 
-	;(function() {
-		gl.enable(gl.BLEND)
-		gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
-		gl.clearColor(0.15, 0.62, 0.54, 1)
+	gl.enable(gl.BLEND)
+	gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
+	gl.clearColor(0.15, 0.62, 0.54, 1)
 
-		gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer())
+	gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer())
 
-		const tx = gl.createTexture()
-		gl.bindTexture(gl.TEXTURE_2D, tx)
-		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE,
-			atlas.canvas)
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-		gl.generateMipmap(gl.TEXTURE_2D)
-		gl.activeTexture(gl.TEXTURE0)
-		gl.bindTexture(gl.TEXTURE_2D, tx)
+	gl.bindTexture(gl.TEXTURE_2D, tx)
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE,
+		atlas.canvas)
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+	gl.generateMipmap(gl.TEXTURE_2D)
+	gl.activeTexture(gl.TEXTURE0)
+	gl.bindTexture(gl.TEXTURE_2D, tx)
 
-		const program = gl.createProgram()
-		function compileShader(type, src) {
-			const shader = gl.createShader(type)
-			gl.shaderSource(shader, src)
-			gl.compileShader(shader)
-			return shader
-		}
-		gl.attachShader(program, compileShader(gl.VERTEX_SHADER,
-			document.getElementById('VertexShader').textContent))
-		gl.attachShader(program, compileShader(gl.FRAGMENT_SHADER,
-			document.getElementById('FragmentShader').textContent))
-		gl.linkProgram(program)
-		gl.useProgram(program)
+	function compileShader(type, src) {
+		const shader = gl.createShader(type)
+		gl.shaderSource(shader, src)
+		gl.compileShader(shader)
+		return shader
+	}
+	gl.attachShader(program, compileShader(gl.VERTEX_SHADER,
+		document.getElementById('VertexShader').textContent))
+	gl.attachShader(program, compileShader(gl.FRAGMENT_SHADER,
+		document.getElementById('FragmentShader').textContent))
+	gl.linkProgram(program)
+	gl.useProgram(program)
 
-		camLoc = gl.getUniformLocation(program, 'c')
+	function enableVertexAttrib(name, count, size, offset) {
+		const loc = gl.getAttribLocation(program, name)
+		gl.enableVertexAttribArray(loc)
+		gl.vertexAttribPointer(loc, count, gl.FLOAT, false,
+			size * 4, offset * 4)
+	}
+	enableVertexAttrib('v', 2, elementsPerVertex, 0)
+	enableVertexAttrib('t', 2, elementsPerVertex, 2)
 
-		function enableVertexAttrib(name, count, size, offset) {
-			const loc = gl.getAttribLocation(program, name)
-			gl.enableVertexAttribArray(loc)
-			gl.vertexAttribPointer(loc, count, gl.FLOAT, false,
-				size * 4, offset * 4)
-		}
-		enableVertexAttrib('v', 2, elementsPerVertex, 0)
-		enableVertexAttrib('t', 2, elementsPerVertex, 2)
-	})()
+	const camLoc = gl.getUniformLocation(program, 'c'),
+		nudge = .5 / atlas.canvas.width
 
 	function setQuad(
 		idx,
@@ -228,6 +224,7 @@ function Renderer(atlas) {
 		], idx * elementsPerVertex)
 	}
 
+	let verts, xscale, yscale, xrad, yrad
 	return {
 		width: 0,
 		height: 0,
