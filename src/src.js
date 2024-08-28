@@ -245,7 +245,9 @@ function Renderer(atlas) {
 		beginFrame: function() {
 			verts = 0
 		},
-		pushSprite: function(sprite, x, y) {
+		pushSprite: function(sprite, x, y, h, v) {
+			h = h || 1
+			v = v || 1
 			x *= xscale
 			y *= yscale
 			setQuad(
@@ -256,10 +258,10 @@ function Renderer(atlas) {
 				// | o |
 				// |/  |
 				// 2---3
-				x - xrad, y + yrad,
-				x + xrad, y + yrad,
-				x - xrad, y - yrad,
-				x + xrad, y - yrad
+				x - xrad * h, y + yrad * v,
+				x + xrad * h, y + yrad * v,
+				x - xrad * h, y - yrad * v,
+				x + xrad * h, y - yrad * v
 			)
 			verts += 6
 		},
