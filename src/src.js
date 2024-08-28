@@ -99,8 +99,7 @@ function loadAtlas(onload) {
 		canvas.pending = len
 		for (let i = 0; i < len; ++i) {
 			const src = sources[i],
-				fm = (src.split('<')[0].trim() + ';').split(';'),
-				size = fm[0].split('x'),
+				size = src.split('<')[0].trim().split('x'),
 				sw = size[0] || svgSize,
 				sh = size[1] || svgSize,
 				dw = sw * scale | 0,
@@ -125,20 +124,9 @@ function loadAtlas(onload) {
 				r - pad, b - pad,
 			)
 			node.img = svgToImg(src, sw, sh, dw, dh).onload = function() {
-				const angle = fm[1] * Math.PI / 180,
-					x = node.rc.l + border,
-					y = node.rc.t + border,
-					w2 = dw >> 1,
-					h2 = dh >> 1
-				if (angle > 0) {
-					ctx.save()
-					ctx.translate(x + w2, y + h2)
-					ctx.rotate(angle)
-					ctx.drawImage(this, -w2, -h2)
-					ctx.restore()
-				} else {
-					ctx.drawImage(this, x, y)
-				}
+				ctx.drawImage(this,
+					node.rc.l + border,
+					node.rc.t + border)
 				--canvas.pending
 			}
 		}
