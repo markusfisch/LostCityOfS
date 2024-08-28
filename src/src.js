@@ -375,12 +375,7 @@ function Game(atlas) {
 	}
 
 	function compareY(a, b) {
-		if (a.y > b.y) {
-			return -1
-		} else if (a.y < b.y) {
-			return 1
-		}
-		return 0
+		return b.y - a.y
 	}
 
 	let last = 0, warp
