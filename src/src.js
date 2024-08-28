@@ -142,7 +142,7 @@ window.onload = function() {
 				waitForAtlas(atlas)
 			}, 100)
 		} else {
-			Game(atlas)
+			Game(Renderer(atlas))
 		}
 	}
 
@@ -274,9 +274,8 @@ function Renderer(atlas) {
 	}
 }
 
-function Game(atlas) {
-	const hasTouch = 'ontouchstart' in document,
-		renderer = Renderer(atlas)
+function Game(renderer) {
+	const hasTouch = 'ontouchstart' in document
 
 	// Prevent pinch/zoom on iOS 11.
 	if (hasTouch) {
