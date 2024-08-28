@@ -1,6 +1,6 @@
 "use strict"
 
-function loadAtlas(onload) {
+window.onload = function() {
 	function svgToImg(svg, sw, sh, dw, dh) {
 		const img = new Image()
 		img.src = `data:image/svg+xml;base64,${btoa(
@@ -142,7 +142,7 @@ function loadAtlas(onload) {
 				waitForAtlas(atlas)
 			}, 100)
 		} else {
-			onload(atlas)
+			Game(atlas)
 		}
 	}
 
@@ -386,8 +386,4 @@ function Game(atlas) {
 		renderer.render(pointersX[0], pointersY[0])
 	}
 	run()
-}
-
-window.onload = function() {
-	loadAtlas(Game)
 }
