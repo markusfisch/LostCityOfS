@@ -304,6 +304,61 @@ function Game(atlas) {
 		}, false)
 	}
 
+	const pointersX = [0], pointersY = [0]
+	let pointers = 0
+	function setPointer(event, down) {
+		const touches = event.touches
+		if (touches) {
+			pointers = touches.length
+			for (let i = pointers; i--;) {
+				const t = touches[i]
+				pointersX[i] = t.pageX
+				pointersY[i] = t.pageY
+			}
+		} else if (!down) {
+			pointers = 0
+		} else {
+			pointers = 1
+			pointersX[0] = event.pageX
+			pointersY[0] = event.pageY
+		}
+
+		// Map to WebGL coordinates.
+		for (let i = pointers; i--;) {
+			pointersX[i] = (2 * pointersX[i]) / renderer.width - 1
+			pointersY[i] = 1 - (2 * pointersY[i]) / renderer.height
+		}
+
+		event.stopPropagation()
+	}
+
+	function pointerCancel(event) {
+		pointers = 0
+	}
+
+	function pointerUp(event) {
+		setPointer(event, 0)
+	}
+
+	function pointerMove(event) {
+		setPointer(event, pointers)
+	}
+
+	function pointerDown(event) {
+		setPointer(event, 1)
+	}
+
+	document.onmousedown = pointerDown
+	document.onmousemove = pointerMove
+	document.onmouseup = pointerUp
+	document.onmouseout = pointerCancel
+
+	document.ontouchstart = pointerDown
+	document.ontouchmove = pointerMove
+	document.ontouchend = pointerUp
+	document.ontouchleave = pointerCancel
+	document.ontouchcancel = pointerCancel
+
 	window.onresize = renderer.resize
 	renderer.resize()
 
@@ -346,7 +401,7 @@ function Game(atlas) {
 		requestAnimationFrame(run)
 		renderer.beginFrame()
 		pushEntities()
-		renderer.render(0, 0)
+		renderer.render(pointersX[0], pointersY[0])
 	}
 	run()
 }
