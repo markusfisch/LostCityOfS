@@ -226,26 +226,27 @@ function Renderer(atlas) {
 
 	let verts, xscale, yscale, xrad, yrad
 	return {
-		width: 0,
-		height: 0,
-		resize: function() {
-			this.width = gl.canvas.clientWidth
-			this.height = gl.canvas.clientHeight
+		// One letter keys because esbuild won't compress these.
+		w: 0,
+		h: 0,
+		s: function() {
+			this.w = gl.canvas.clientWidth
+			this.h = gl.canvas.clientHeight
 
-			gl.canvas.width = this.width
-			gl.canvas.height = this.height
-			gl.viewport(0, 0, this.width, this.height)
+			gl.canvas.width = this.w
+			gl.canvas.height = this.h
+			gl.viewport(0, 0, this.w, this.h)
 
 			xscale = .2
-			yscale = xscale * (this.width / this.height)
+			yscale = xscale * (this.w / this.h)
 
 			xrad = xscale * .5
 			yrad = yscale * .5
 		},
-		beginFrame: function() {
+		b: function() {
 			verts = 0
 		},
-		pushSprite: function(sprite, x, y, h, v) {
+		p: function(sprite, x, y, h, v) {
 			h = h || 1
 			v = v || 1
 			x *= xscale
@@ -265,7 +266,7 @@ function Renderer(atlas) {
 			)
 			verts += 6
 		},
-		render: function(x, y) {
+		r: function(x, y) {
 			gl.uniform2f(camLoc, x, y)
 			gl.bufferData(gl.ARRAY_BUFFER, bufferData, gl.DYNAMIC_DRAW)
 			gl.clear(gl.COLOR_BUFFER_BIT)
@@ -311,8 +312,8 @@ function Game(renderer) {
 
 		// Map to WebGL coordinates.
 		for (let i = pointers; i--;) {
-			pointersX[i] = (2 * pointersX[i]) / renderer.width - 1
-			pointersY[i] = 1 - (2 * pointersY[i]) / renderer.height
+			pointersX[i] = (2 * pointersX[i]) / renderer.w - 1
+			pointersY[i] = 1 - (2 * pointersY[i]) / renderer.h
 		}
 
 		event.stopPropagation()
@@ -345,8 +346,8 @@ function Game(renderer) {
 	document.ontouchleave = pointerCancel
 	document.ontouchcancel = pointerCancel
 
-	window.onresize = renderer.resize
-	renderer.resize()
+	window.onresize = renderer.s
+	renderer.s()
 
 	const entities = []
 	for (let i = 0; i < 1000; ++i) {
@@ -365,7 +366,7 @@ function Game(renderer) {
 	}
 
 	let last = 0, warp
-	function pushEntities() {
+	function update() {
 		const now = Date.now()
 		warp = (now - last) / 16
 		last = now
@@ -374,15 +375,15 @@ function Game(renderer) {
 			const e = entities[i]
 			e.x = (((e.x + e.vx * warp) + 5) % 10) - 5
 			e.y = (((e.y + e.vy * warp) + 5) % 10) - 5
-			renderer.pushSprite(e.sprite, e.x, -e.y)
+			renderer.p(e.sprite, e.x, -e.y)
 		}
 	}
 
 	function run() {
 		requestAnimationFrame(run)
-		renderer.beginFrame()
-		pushEntities()
-		renderer.render(pointersX[0], pointersY[0])
+		renderer.b()
+		update()
+		renderer.r(pointersX[0], pointersY[0])
 	}
 	run()
 }
