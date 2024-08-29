@@ -1,5 +1,247 @@
 "use strict"
 
+function Game(renderer) {
+	const hasTouch = 'ontouchstart' in document
+
+	// Prevent pinch/zoom on iOS 11.
+	if (hasTouch) {
+		document.addEventListener('gesturestart', function(event) {
+			event.preventDefault()
+		}, false)
+		document.addEventListener('gesturechange', function(event) {
+			event.preventDefault()
+		}, false)
+		document.addEventListener('gestureend', function(event) {
+			event.preventDefault()
+		}, false)
+	}
+
+	const pointersX = [0], pointersY = [0]
+	let pointers = 0
+	function setPointer(event, down) {
+		const touches = event.touches
+		if (touches) {
+			pointers = touches.length
+			for (let i = pointers; i--;) {
+				const t = touches[i]
+				pointersX[i] = t.pageX
+				pointersY[i] = t.pageY
+			}
+		} else if (!down) {
+			pointers = 0
+		} else {
+			pointers = 1
+			pointersX[0] = event.pageX
+			pointersY[0] = event.pageY
+		}
+
+		// Map to WebGL coordinates.
+		for (let i = pointers; i--;) {
+			pointersX[i] = (2 * pointersX[i]) / renderer.w - 1
+			pointersY[i] = 1 - (2 * pointersY[i]) / renderer.h
+		}
+
+		event.stopPropagation()
+	}
+
+	function pointerCancel(event) {
+		pointers = 0
+	}
+
+	function pointerUp(event) {
+		setPointer(event, 0)
+	}
+
+	function pointerMove(event) {
+		setPointer(event, pointers)
+	}
+
+	function pointerDown(event) {
+		setPointer(event, 1)
+	}
+
+	document.onmousedown = pointerDown
+	document.onmousemove = pointerMove
+	document.onmouseup = pointerUp
+	document.onmouseout = pointerCancel
+
+	document.ontouchstart = pointerDown
+	document.ontouchmove = pointerMove
+	document.ontouchend = pointerUp
+	document.ontouchleave = pointerCancel
+	document.ontouchcancel = pointerCancel
+
+	window.onresize = renderer.s
+	renderer.s()
+
+	const entities = []
+	for (let i = 0; i < 10; ++i) {
+		const sprite = i % 2
+		entities.push({
+			sprite: 2 + sprite,
+			x: Math.random() * 10 - 5,
+			y: Math.random() * 10 - 5,
+			vx: sprite ? .01 : 0,
+			vy: sprite ? 0 : .01,
+		})
+	}
+
+	const mapCols = 32, mapRows = 32, map = []
+	for (let y = 0, i = 0; y < mapRows; ++y) {
+		for (let x = 0; x < mapCols; ++x, ++i) {
+			map[i] = (x + y) % 2
+			renderer.p(map[i], x - 16, -y + 16)
+		}
+	}
+	renderer.m()
+
+	function compareY(a, b) {
+		return b.y - a.y
+	}
+
+	let last = 0, warp
+	function run() {
+		requestAnimationFrame(run)
+
+		const now = Date.now()
+		warp = (now - last) / 16
+		last = now
+
+		entities.sort(compareY)
+		for (let i = entities.length; i-- > 0;) {
+			const e = entities[i]
+			e.x = (((e.x + e.vx * warp) + 5) % 10) - 5
+			e.y = (((e.y + e.vy * warp) + 5) % 10) - 5
+			renderer.p(e.sprite, e.x, -e.y)
+		}
+
+		renderer.r(pointersX[0], pointersY[0])
+	}
+	run()
+}
+
+function Renderer(atlas) {
+	const elementsPerVertex = 4,
+		bufferData = new Float32Array(1024 * 64 * elementsPerVertex),
+		gl = document.getElementById('C').getContext('webgl'),
+		tx = gl.createTexture(),
+		program = gl.createProgram()
+
+	gl.enable(gl.BLEND)
+	gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
+	gl.clearColor(0.15, 0.62, 0.54, 1)
+
+	gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer())
+
+	gl.bindTexture(gl.TEXTURE_2D, tx)
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE,
+		atlas.canvas)
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+	gl.generateMipmap(gl.TEXTURE_2D)
+	gl.activeTexture(gl.TEXTURE0)
+	gl.bindTexture(gl.TEXTURE_2D, tx)
+
+	function compileShader(type, src) {
+		const shader = gl.createShader(type)
+		gl.shaderSource(shader, src)
+		gl.compileShader(shader)
+		return shader
+	}
+	gl.attachShader(program, compileShader(gl.VERTEX_SHADER,
+		document.getElementById('VertexShader').textContent))
+	gl.attachShader(program, compileShader(gl.FRAGMENT_SHADER,
+		document.getElementById('FragmentShader').textContent))
+	gl.linkProgram(program)
+	gl.useProgram(program)
+
+	function enableVertexAttrib(name, count, size, offset) {
+		const loc = gl.getAttribLocation(program, name)
+		gl.enableVertexAttribArray(loc)
+		gl.vertexAttribPointer(loc, count, gl.FLOAT, false,
+			size * 4, offset * 4)
+	}
+	enableVertexAttrib('v', 2, elementsPerVertex, 0)
+	enableVertexAttrib('t', 2, elementsPerVertex, 2)
+
+	const camLoc = gl.getUniformLocation(program, 'c'),
+		nudge = .5 / atlas.canvas.width
+
+	function setQuad(
+		idx,
+		sprite,
+		x1, y1,
+		x2, y2,
+		x3, y3,
+		x4, y4
+	) {
+		const offset = sprite << 3,
+			l = atlas.coords[offset] + nudge,
+			t = atlas.coords[offset + 1] + nudge,
+			r = atlas.coords[offset + 6] - nudge,
+			b = atlas.coords[offset + 7] - nudge
+		bufferData.set([
+			x1, y1, l, t,
+			x2, y2, r, t,
+			x3, y3, l, b,
+			x2, y2, r, t,
+			x3, y3, l, b,
+			x4, y4, r, b,
+		], idx * elementsPerVertex)
+	}
+
+	let verts = 0, xscale, yscale, xrad, yrad
+	return {
+		// One letter keys because esbuild won't compress these.
+		w: 0,
+		h: 0,
+		s: function() {
+			this.w = gl.canvas.clientWidth
+			this.h = gl.canvas.clientHeight
+
+			gl.canvas.width = this.w
+			gl.canvas.height = this.h
+			gl.viewport(0, 0, this.w, this.h)
+
+			xscale = .2
+			yscale = xscale * (this.w / this.h)
+
+			xrad = xscale * .5
+			yrad = yscale * .5
+		},
+		m: function() {
+			this.base = verts
+		},
+		p: function(sprite, x, y, h, v) {
+			h = h || 1
+			v = v || 1
+			x *= xscale
+			y *= yscale
+			setQuad(
+				verts,
+				sprite,
+				// 0---1
+				// |  /|
+				// | o |
+				// |/  |
+				// 2---3
+				x - xrad * h, y + yrad * v,
+				x + xrad * h, y + yrad * v,
+				x - xrad * h, y - yrad * v,
+				x + xrad * h, y - yrad * v
+			)
+			verts += 6
+		},
+		r: function(x, y) {
+			gl.uniform2f(camLoc, x, y)
+			gl.bufferData(gl.ARRAY_BUFFER, bufferData, gl.DYNAMIC_DRAW)
+			gl.clear(gl.COLOR_BUFFER_BIT)
+			gl.drawArrays(gl.TRIANGLES, 0, verts)
+			verts = this.base
+		}
+	}
+}
+
 window.onload = function() {
 	function svgToImg(svg, sw, sh, dw, dh) {
 		const img = new Image()
@@ -152,246 +394,4 @@ window.onload = function() {
 		sources.push(gs[i].innerHTML)
 	}
 	waitForAtlas(createAtlas(sources))
-}
-
-function Renderer(atlas) {
-	const elementsPerVertex = 4,
-		bufferData = new Float32Array(1024 * 64 * elementsPerVertex),
-		gl = document.getElementById('C').getContext('webgl'),
-		tx = gl.createTexture(),
-		program = gl.createProgram()
-
-	gl.enable(gl.BLEND)
-	gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
-	gl.clearColor(0.15, 0.62, 0.54, 1)
-
-	gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer())
-
-	gl.bindTexture(gl.TEXTURE_2D, tx)
-	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE,
-		atlas.canvas)
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-	gl.generateMipmap(gl.TEXTURE_2D)
-	gl.activeTexture(gl.TEXTURE0)
-	gl.bindTexture(gl.TEXTURE_2D, tx)
-
-	function compileShader(type, src) {
-		const shader = gl.createShader(type)
-		gl.shaderSource(shader, src)
-		gl.compileShader(shader)
-		return shader
-	}
-	gl.attachShader(program, compileShader(gl.VERTEX_SHADER,
-		document.getElementById('VertexShader').textContent))
-	gl.attachShader(program, compileShader(gl.FRAGMENT_SHADER,
-		document.getElementById('FragmentShader').textContent))
-	gl.linkProgram(program)
-	gl.useProgram(program)
-
-	function enableVertexAttrib(name, count, size, offset) {
-		const loc = gl.getAttribLocation(program, name)
-		gl.enableVertexAttribArray(loc)
-		gl.vertexAttribPointer(loc, count, gl.FLOAT, false,
-			size * 4, offset * 4)
-	}
-	enableVertexAttrib('v', 2, elementsPerVertex, 0)
-	enableVertexAttrib('t', 2, elementsPerVertex, 2)
-
-	const camLoc = gl.getUniformLocation(program, 'c'),
-		nudge = .5 / atlas.canvas.width
-
-	function setQuad(
-		idx,
-		sprite,
-		x1, y1,
-		x2, y2,
-		x3, y3,
-		x4, y4
-	) {
-		const offset = sprite << 3,
-			l = atlas.coords[offset] + nudge,
-			t = atlas.coords[offset + 1] + nudge,
-			r = atlas.coords[offset + 6] - nudge,
-			b = atlas.coords[offset + 7] - nudge
-		bufferData.set([
-			x1, y1, l, t,
-			x2, y2, r, t,
-			x3, y3, l, b,
-			x2, y2, r, t,
-			x3, y3, l, b,
-			x4, y4, r, b,
-		], idx * elementsPerVertex)
-	}
-
-	let verts = 0, xscale, yscale, xrad, yrad
-	return {
-		// One letter keys because esbuild won't compress these.
-		w: 0,
-		h: 0,
-		s: function() {
-			this.w = gl.canvas.clientWidth
-			this.h = gl.canvas.clientHeight
-
-			gl.canvas.width = this.w
-			gl.canvas.height = this.h
-			gl.viewport(0, 0, this.w, this.h)
-
-			xscale = .2
-			yscale = xscale * (this.w / this.h)
-
-			xrad = xscale * .5
-			yrad = yscale * .5
-		},
-		m: function() {
-			this.base = verts
-		},
-		p: function(sprite, x, y, h, v) {
-			h = h || 1
-			v = v || 1
-			x *= xscale
-			y *= yscale
-			setQuad(
-				verts,
-				sprite,
-				// 0---1
-				// |  /|
-				// | o |
-				// |/  |
-				// 2---3
-				x - xrad * h, y + yrad * v,
-				x + xrad * h, y + yrad * v,
-				x - xrad * h, y - yrad * v,
-				x + xrad * h, y - yrad * v
-			)
-			verts += 6
-		},
-		r: function(x, y) {
-			gl.uniform2f(camLoc, x, y)
-			gl.bufferData(gl.ARRAY_BUFFER, bufferData, gl.DYNAMIC_DRAW)
-			gl.clear(gl.COLOR_BUFFER_BIT)
-			gl.drawArrays(gl.TRIANGLES, 0, verts)
-			verts = this.base
-		}
-	}
-}
-
-function Game(renderer) {
-	const hasTouch = 'ontouchstart' in document
-
-	// Prevent pinch/zoom on iOS 11.
-	if (hasTouch) {
-		document.addEventListener('gesturestart', function(event) {
-			event.preventDefault()
-		}, false)
-		document.addEventListener('gesturechange', function(event) {
-			event.preventDefault()
-		}, false)
-		document.addEventListener('gestureend', function(event) {
-			event.preventDefault()
-		}, false)
-	}
-
-	const pointersX = [0], pointersY = [0]
-	let pointers = 0
-	function setPointer(event, down) {
-		const touches = event.touches
-		if (touches) {
-			pointers = touches.length
-			for (let i = pointers; i--;) {
-				const t = touches[i]
-				pointersX[i] = t.pageX
-				pointersY[i] = t.pageY
-			}
-		} else if (!down) {
-			pointers = 0
-		} else {
-			pointers = 1
-			pointersX[0] = event.pageX
-			pointersY[0] = event.pageY
-		}
-
-		// Map to WebGL coordinates.
-		for (let i = pointers; i--;) {
-			pointersX[i] = (2 * pointersX[i]) / renderer.w - 1
-			pointersY[i] = 1 - (2 * pointersY[i]) / renderer.h
-		}
-
-		event.stopPropagation()
-	}
-
-	function pointerCancel(event) {
-		pointers = 0
-	}
-
-	function pointerUp(event) {
-		setPointer(event, 0)
-	}
-
-	function pointerMove(event) {
-		setPointer(event, pointers)
-	}
-
-	function pointerDown(event) {
-		setPointer(event, 1)
-	}
-
-	document.onmousedown = pointerDown
-	document.onmousemove = pointerMove
-	document.onmouseup = pointerUp
-	document.onmouseout = pointerCancel
-
-	document.ontouchstart = pointerDown
-	document.ontouchmove = pointerMove
-	document.ontouchend = pointerUp
-	document.ontouchleave = pointerCancel
-	document.ontouchcancel = pointerCancel
-
-	window.onresize = renderer.s
-	renderer.s()
-
-	const entities = []
-	for (let i = 0; i < 10; ++i) {
-		const sprite = i % 2
-		entities.push({
-			sprite: 2 + sprite,
-			x: Math.random() * 10 - 5,
-			y: Math.random() * 10 - 5,
-			vx: sprite ? .01 : 0,
-			vy: sprite ? 0 : .01,
-		})
-	}
-
-	const mapCols = 32, mapRows = 32, map = []
-	for (let y = 0, i = 0; y < mapRows; ++y) {
-		for (let x = 0; x < mapCols; ++x, ++i) {
-			map[i] = (x + y) % 2
-			renderer.p(map[i], x - 16, -y + 16)
-		}
-	}
-	renderer.m()
-
-	function compareY(a, b) {
-		return b.y - a.y
-	}
-
-	let last = 0, warp
-	function run() {
-		requestAnimationFrame(run)
-
-		const now = Date.now()
-		warp = (now - last) / 16
-		last = now
-
-		entities.sort(compareY)
-		for (let i = entities.length; i-- > 0;) {
-			const e = entities[i]
-			e.x = (((e.x + e.vx * warp) + 5) % 10) - 5
-			e.y = (((e.y + e.vy * warp) + 5) % 10) - 5
-			renderer.p(e.sprite, e.x, -e.y)
-		}
-
-		renderer.r(pointersX[0], pointersY[0])
-	}
-	run()
 }
