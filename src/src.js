@@ -224,7 +224,7 @@ function Renderer(atlas) {
 		], idx * elementsPerVertex)
 	}
 
-	let verts, xscale, yscale, xrad, yrad
+	let verts = 0, xscale, yscale, xrad, yrad
 	return {
 		// One letter keys because esbuild won't compress these.
 		w: 0,
@@ -243,8 +243,8 @@ function Renderer(atlas) {
 			xrad = xscale * .5
 			yrad = yscale * .5
 		},
-		b: function() {
-			verts = 0
+		m: function() {
+			this.base = verts
 		},
 		p: function(sprite, x, y, h, v) {
 			h = h || 1
@@ -271,6 +271,7 @@ function Renderer(atlas) {
 			gl.bufferData(gl.ARRAY_BUFFER, bufferData, gl.DYNAMIC_DRAW)
 			gl.clear(gl.COLOR_BUFFER_BIT)
 			gl.drawArrays(gl.TRIANGLES, 0, verts)
+			verts = this.base
 		}
 	}
 }
@@ -350,10 +351,10 @@ function Game(renderer) {
 	renderer.s()
 
 	const entities = []
-	for (let i = 0; i < 1000; ++i) {
+	for (let i = 0; i < 10; ++i) {
 		const sprite = i % 2
 		entities.push({
-			sprite: sprite,
+			sprite: 2 + sprite,
 			x: Math.random() * 10 - 5,
 			y: Math.random() * 10 - 5,
 			vx: sprite ? .01 : 0,
@@ -361,15 +362,27 @@ function Game(renderer) {
 		})
 	}
 
+	const mapCols = 32, mapRows = 32, map = []
+	for (let y = 0, i = 0; y < mapRows; ++y) {
+		for (let x = 0; x < mapCols; ++x, ++i) {
+			map[i] = (x + y) % 2
+			renderer.p(map[i], x - 16, -y + 16)
+		}
+	}
+	renderer.m()
+
 	function compareY(a, b) {
 		return b.y - a.y
 	}
 
 	let last = 0, warp
-	function update() {
+	function run() {
+		requestAnimationFrame(run)
+
 		const now = Date.now()
 		warp = (now - last) / 16
 		last = now
+
 		entities.sort(compareY)
 		for (let i = entities.length; i-- > 0;) {
 			const e = entities[i]
@@ -377,12 +390,7 @@ function Game(renderer) {
 			e.y = (((e.y + e.vy * warp) + 5) % 10) - 5
 			renderer.p(e.sprite, e.x, -e.y)
 		}
-	}
 
-	function run() {
-		requestAnimationFrame(run)
-		renderer.b()
-		update()
 		renderer.r(pointersX[0], pointersY[0])
 	}
 	run()
