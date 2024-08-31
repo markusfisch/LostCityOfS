@@ -60,31 +60,12 @@ function Game(renderer) {
 		setPointer(event, 1)
 	}
 
+	const keysDown = []
+	document.onkeyup = function(event) {
+		keysDown[event.keyCode] = false
+	}
 	document.onkeydown = function(event) {
-		const step = .5
-		let x = 0, y = 0
-		switch (event.keyCode) {
-		case 37:
-		case 72:
-			x = -step
-			break
-		case 39:
-		case 76:
-			x = step
-			break
-		case 38:
-		case 75:
-			y = -step
-			break
-		case 40:
-		case 74:
-			y = step
-			break
-		}
-		player.x += x
-		player.y += y
-		player.x = Math.min(mapCols - 1, Math.max(player.x, 0))
-		player.y = Math.min(mapRows - 1, Math.max(player.y, 0))
+		keysDown[event.keyCode] = true
 	}
 
 	document.onmousedown = pointerDown
@@ -97,6 +78,30 @@ function Game(renderer) {
 	document.ontouchend = pointerUp
 	document.ontouchleave = pointerCancel
 	document.ontouchcancel = pointerCancel
+
+	function input() {
+		const step = .05 * warp
+		let x = 0, y = 0
+		if (keysDown[37] || keysDown[72]) {
+			x = -step
+		}
+		if (keysDown[39] || keysDown[76]) {
+			x = step
+		}
+		if (keysDown[38] || keysDown[75]) {
+			y = -step
+		}
+		if (keysDown[40] || keysDown[74]) {
+			y = step
+		}
+		if (keysDown[32]) {
+			shake()
+		}
+		player.x += x
+		player.y += y
+		player.x = Math.min(mapCols - 1, Math.max(player.x, 0))
+		player.y = Math.min(mapRows - 1, Math.max(player.y, 0))
+	}
 
 	const mapCols = 32, mapRows = 32, map = []
 	function pushMap() {
@@ -165,6 +170,8 @@ function Game(renderer) {
 		const now = Date.now()
 		warp = (now - last) / 16
 		last = now
+
+		input()
 
 		entities.sort(compareY)
 		for (let i = entities.length; i-- > 0;) {
