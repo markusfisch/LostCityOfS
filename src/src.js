@@ -80,6 +80,8 @@ function Game(renderer) {
 			y: Math.random() * 10 - 5,
 			vx: sprite ? .01 : 0,
 			vy: sprite ? 0 : .01,
+			dx: Math.random() > .5 ? 1 : -1,
+			dy: 1
 		})
 	}
 
@@ -118,7 +120,7 @@ function Game(renderer) {
 			const e = entities[i]
 			e.x = (((e.x + e.vx * warp) + 5) % 10) - 5
 			e.y = (((e.y + e.vy * warp) + 5) % 10) - 5
-			renderer.p(e.sprite, e.x, -e.y)
+			renderer.p(e.sprite, e.x, -e.y, e.dx, e.dy)
 		}
 
 		renderer.r(pointersX[0], pointersY[0])
