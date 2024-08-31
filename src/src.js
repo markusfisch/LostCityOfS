@@ -1,7 +1,20 @@
 "use strict"
 
 function Game(renderer) {
-	const hasTouch = 'ontouchstart' in document
+	const hasTouch = 'ontouchstart' in document,
+		pointersX = [], pointersY = [], keysDown = [],
+		mapCols = 32, mapRows = 32, map = [],
+		centerX = mapCols >> 1, centerY = mapRows >> 1,
+		entities = [],
+		shakePattern = [.1, .4, .7, .3, .5, .2],
+		shakeLength = shakePattern.length,
+		shakeDuration = 300
+
+	let pointers = 0,
+		viewXMin, viewXMax, viewYMin, viewYMax,
+		lookX = centerX, lookY = centerY,
+		shakeUntil = 0,
+		last = 0, warp
 
 	// Prevent pinch/zoom on iOS 11.
 	if (hasTouch) {
@@ -16,8 +29,6 @@ function Game(renderer) {
 		}, false)
 	}
 
-	const pointersX = [0], pointersY = [0]
-	let pointers = 0
 	function setPointer(event, down) {
 		const touches = event.touches
 		if (touches) {
@@ -60,14 +71,6 @@ function Game(renderer) {
 		setPointer(event, 1)
 	}
 
-	const keysDown = []
-	document.onkeyup = function(event) {
-		keysDown[event.keyCode] = false
-	}
-	document.onkeydown = function(event) {
-		keysDown[event.keyCode] = true
-	}
-
 	document.onmousedown = pointerDown
 	document.onmousemove = pointerMove
 	document.onmouseup = pointerUp
@@ -79,7 +82,14 @@ function Game(renderer) {
 	document.ontouchleave = pointerCancel
 	document.ontouchcancel = pointerCancel
 
-	function input() {
+	document.onkeyup = function(event) {
+		keysDown[event.keyCode] = false
+	}
+	document.onkeydown = function(event) {
+		keysDown[event.keyCode] = true
+	}
+
+	function input(now) {
 		const step = .05 * warp
 		let x = 0, y = 0
 		if (keysDown[37] || keysDown[72]) {
@@ -95,27 +105,12 @@ function Game(renderer) {
 			y = step
 		}
 		if (keysDown[32]) {
-			shake()
+			shakeUntil = now + shakeDuration
 		}
-		player.x += x
-		player.y += y
-		player.x = Math.min(mapCols - 1, Math.max(player.x, 0))
-		player.y = Math.min(mapRows - 1, Math.max(player.y, 0))
+		player.x = Math.min(mapCols - 1, Math.max(player.x + x, 0))
+		player.y = Math.min(mapRows - 1, Math.max(player.y + y, 0))
 	}
 
-	const mapCols = 32, mapRows = 32, map = []
-	function pushMap() {
-		map.length = 0
-		for (let y = 0, i = 0; y < mapRows; ++y) {
-			for (let x = 0; x < mapCols; ++x, ++i) {
-				map[i] = (x + y) % 2
-				renderer.p(map[i], x, -y)
-			}
-		}
-		renderer.m()
-	}
-
-	const entities = [], centerX = mapCols >> 1, centerY = mapRows >> 1
 	for (let i = 0; i < 10; ++i) {
 		const sprite = i % 2
 		entities.push({
@@ -136,8 +131,8 @@ function Game(renderer) {
 	}
 	const player = {
 		sprite: 4,
-		x: centerX,
-		y: centerY,
+		x: lookX,
+		y: lookY,
 		vx: 0,
 		vy: 0,
 		dx: 1,
@@ -146,32 +141,30 @@ function Game(renderer) {
 	}
 	entities.push(player)
 
-	let viewXMin, viewXMax, viewYMin, viewYMax
 	window.onresize = function() {
 		renderer.s()
 
-		viewXMin = -1 + renderer.u
-		viewXMax = -mapCols * renderer.x + 1 + renderer.u
-		viewYMin = 1 - renderer.v
-		viewYMax = mapRows * renderer.y - 1 - renderer.v
+		const x2 = renderer.xscale / 2, y2 = renderer.yscale / 2
+		viewXMin = -1 + x2
+		viewXMax = -mapCols * renderer.xscale + 1 + x2
+		viewYMin = 1 - y2
+		viewYMax = mapRows * renderer.yscale - 1 - y2
 
-		pushMap()
+		map.length = 0
+		for (let y = 0, i = 0; y < mapRows; ++y) {
+			for (let x = 0; x < mapCols; ++x, ++i) {
+				map[i] = (x + y) % 2
+				renderer.p(map[i], x, -y)
+			}
+		}
+		renderer.m()
 	}
 	window.onresize()
-
-	const shakePattern = [.1, .4, .7, .3, .5, .2],
-		shakeLength = shakePattern.length,
-		shakeDuration = 300
-	let shakeUntil = 0
-	function shake() {
-		shakeUntil = Date.now() + shakeDuration
-	}
 
 	function compareY(a, b) {
 		return b.y - a.y
 	}
 
-	let last = 0, warp, lookX = player.y, lookY = player.x
 	function run() {
 		requestAnimationFrame(run)
 
@@ -179,7 +172,7 @@ function Game(renderer) {
 		warp = (now - last) / 16
 		last = now
 
-		input()
+		input(now)
 
 		entities.sort(compareY)
 		for (let i = entities.length; i-- > 0;) {
@@ -195,11 +188,10 @@ function Game(renderer) {
 			lookX = lookX * .9 + player.x * .1
 			lookY = lookY * .9 + player.y * .1
 		}
-		let vx = -lookX * renderer.x,
-			vy = lookY * renderer.y
+		let vx = -lookX * renderer.xscale,
+			vy = lookY * renderer.yscale
 		vx = Math.min(Math.max(vx, viewXMax), viewXMin),
 		vy = Math.min(Math.max(vy, viewYMin), viewYMax)
-
 		if (shakeUntil > now) {
 			const p = (shakeUntil - now) / shakeDuration * .05
 			vx += shakePattern[(now + 1) % shakeLength] * p
@@ -285,15 +277,13 @@ function Renderer(atlas) {
 		], idx * elementsPerVertex)
 	}
 
-	let verts = 0
+	let verts = 0, x2, y2
 	return {
 		// One letter keys because esbuild won't compress these.
 		w: 0,
 		h: 0,
-		x: 0,
-		y: 0,
-		u: 0,
-		v: 0,
+		xscale: 0,
+		yscale: 0,
 		s: function() {
 			this.w = gl.canvas.clientWidth
 			this.h = gl.canvas.clientHeight
@@ -302,11 +292,11 @@ function Renderer(atlas) {
 			gl.canvas.height = this.h
 			gl.viewport(0, 0, this.w, this.h)
 
-			this.x = .2
-			this.y = this.x * (this.w / this.h)
+			this.xscale = .2
+			this.yscale = this.xscale * (this.w / this.h)
 
-			this.u = this.x * .5
-			this.v = this.y * .5
+			x2 = this.xscale / 2
+			y2 = this.yscale / 2
 
 			verts = 0
 		},
@@ -316,12 +306,14 @@ function Renderer(atlas) {
 		p: function(sprite, x, y, h, v) {
 			h = h || 1
 			v = v || 1
+
 			const size = atlas.sizes[sprite]
 			h *= size[0]
 			v *= size[1]
-			x *= this.x
-			y *= this.y
-			const xr = this.u, yr = this.v
+
+			x *= this.xscale
+			y *= this.yscale
+
 			setQuad(
 				verts,
 				sprite,
@@ -330,10 +322,10 @@ function Renderer(atlas) {
 				// | o |
 				// |/  |
 				// 2---3
-				x - xr * h, y + yr * v,
-				x + xr * h, y + yr * v,
-				x - xr * h, y - yr * v,
-				x + xr * h, y - yr * v
+				x - x2 * h, y + y2 * v,
+				x + x2 * h, y + y2 * v,
+				x - x2 * h, y - y2 * v,
+				x + x2 * h, y - y2 * v
 			)
 			verts += 6
 		},
