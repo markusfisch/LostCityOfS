@@ -107,12 +107,12 @@ function Game(renderer) {
 		return b.y - a.y
 	}
 
-	let last = 0, warp
+	let last = 0
 	function run() {
 		requestAnimationFrame(run)
 
-		const now = Date.now()
-		warp = (now - last) / 16
+		const now = Date.now(),
+			warp = (now - last) / 16
 		last = now
 
 		entities.sort(compareY)
