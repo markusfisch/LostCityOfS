@@ -229,6 +229,9 @@ function Renderer(atlas) {
 		p: function(sprite, x, y, h, v) {
 			h = h || 1
 			v = v || 1
+			const size = atlas.sizes[sprite]
+			h *= size[0]
+			v *= size[1]
 			x *= xscale
 			y *= yscale
 			setQuad(
@@ -348,6 +351,7 @@ window.onload = function() {
 			pad = (border + 2) * uvPixel,
 			nodes = {rc: {l: 0, t: 0, r: atlasSize, b: atlasSize}},
 			coords = [],
+			sizes = [],
 			canvas = document.createElement('canvas'),
 			ctx = canvas.getContext('2d'),
 			len = sources.length
@@ -379,6 +383,7 @@ window.onload = function() {
 				r - pad, t + pad,
 				r - pad, b - pad,
 			)
+			sizes.push([dw / tileSize, dh / tileSize])
 			node.img = svgToImg(src, sw, sh, dw, dh).onload = function() {
 				ctx.drawImage(this,
 					node.rc.l + border,
@@ -388,7 +393,8 @@ window.onload = function() {
 		}
 		return {
 			canvas: canvas,
-			coords: coords
+			coords: coords,
+			sizes: sizes
 		}
 	}
 
