@@ -60,6 +60,33 @@ function Game(renderer) {
 		setPointer(event, 1)
 	}
 
+	document.onkeydown = function(event) {
+		const step = .5
+		let x = 0, y = 0
+		switch (event.keyCode) {
+		case 37:
+		case 72:
+			x = -step
+			break
+		case 39:
+		case 76:
+			x = step
+			break
+		case 38:
+		case 75:
+			y = -step
+			break
+		case 40:
+		case 74:
+			y = step
+			break
+		}
+		player.x += x
+		player.y += y
+		player.x = Math.min(mapCols - 1, Math.max(player.x, 0))
+		player.y = Math.min(mapRows - 1, Math.max(player.y, 0))
+	}
+
 	document.onmousedown = pointerDown
 	document.onmousemove = pointerMove
 	document.onmouseup = pointerUp
@@ -71,34 +98,58 @@ function Game(renderer) {
 	document.ontouchleave = pointerCancel
 	document.ontouchcancel = pointerCancel
 
-	const entities = []
-	for (let i = 0; i < 10; ++i) {
-		const sprite = i % 2
-		entities.push({
-			sprite: 2 + sprite,
-			x: Math.random() * 10 - 5,
-			y: Math.random() * 10 - 5,
-			vx: sprite ? .01 : 0,
-			vy: sprite ? 0 : .01,
-			dx: Math.random() > .5 ? 1 : -1,
-			dy: 1
-		})
-	}
-
 	const mapCols = 32, mapRows = 32, map = []
 	function pushMap() {
 		map.length = 0
 		for (let y = 0, i = 0; y < mapRows; ++y) {
 			for (let x = 0; x < mapCols; ++x, ++i) {
 				map[i] = (x + y) % 2
-				renderer.p(map[i], x - 16, -y + 16)
+				renderer.p(map[i], x, -y)
 			}
 		}
 		renderer.m()
 	}
 
+	const entities = [], centerX = mapCols >> 1, centerY = mapRows >> 1
+	for (let i = 0; i < 10; ++i) {
+		const sprite = i % 2
+		entities.push({
+			sprite: 2 + sprite,
+			x: centerX + Math.random() * mapCols - centerX,
+			y: centerY + Math.random() * mapRows - centerY,
+			vx: sprite ? .01 : 0,
+			vy: sprite ? 0 : .01,
+			dx: Math.random() > .5 ? 1 : -1,
+			dy: 1,
+			update: function() {
+				this.x += this.vx * warp
+				this.y += this.vy * warp
+				this.x %= mapCols
+				this.y %= mapRows
+			}
+		})
+	}
+	const player = {
+		sprite: 4,
+		x: centerX,
+		y: centerY,
+		vx: 0,
+		vy: 0,
+		dx: 1,
+		dy: 1,
+		update: function() {}
+	}
+	entities.push(player)
+
+	let viewXMin, viewXMax, viewYMin, viewYMax
 	window.onresize = function() {
 		renderer.s()
+
+		viewXMin = -1 + renderer.xrad
+		viewXMax = -mapCols * renderer.xscale + 1 + renderer.xrad
+		viewYMin = 1 - renderer.yrad
+		viewYMax = mapRows * renderer.yscale - 1 - renderer.yrad
+
 		pushMap()
 	}
 	window.onresize()
@@ -107,23 +158,33 @@ function Game(renderer) {
 		return b.y - a.y
 	}
 
-	let last = 0
+	let last = 0, warp, lookX = player.y, lookY = player.x
 	function run() {
 		requestAnimationFrame(run)
 
-		const now = Date.now(),
-			warp = (now - last) / 16
+		const now = Date.now()
+		warp = (now - last) / 16
 		last = now
 
 		entities.sort(compareY)
 		for (let i = entities.length; i-- > 0;) {
 			const e = entities[i]
-			e.x = (((e.x + e.vx * warp) + 5) % 10) - 5
-			e.y = (((e.y + e.vy * warp) + 5) % 10) - 5
+			e.update()
 			renderer.p(e.sprite, e.x, -e.y, e.dx, e.dy)
 		}
 
-		renderer.r(pointersX[0], pointersY[0])
+		const dx = lookX - player.x,
+			dz = lookY - player.y,
+			d = dx*dx + dz*dz
+		if (d > .01) {
+			lookX = lookX * .9 + player.x * .1
+			lookY = lookY * .9 + player.y * .1
+		}
+		let vx = -lookX * renderer.xscale,
+			vy = lookY * renderer.yscale
+		vx = Math.min(Math.max(vx, viewXMax), viewXMin),
+		vy = Math.min(Math.max(vy, viewYMin), viewYMax)
+		renderer.r(vx, vy)
 	}
 	run()
 }
@@ -202,11 +263,15 @@ function Renderer(atlas) {
 		], idx * elementsPerVertex)
 	}
 
-	let verts = 0, xscale, yscale, xrad, yrad
+	let verts = 0
 	return {
 		// One letter keys because esbuild won't compress these.
 		w: 0,
 		h: 0,
+		xscale: 0,
+		yscale: 0,
+		xrad: 0,
+		yrad: 0,
 		s: function() {
 			this.w = gl.canvas.clientWidth
 			this.h = gl.canvas.clientHeight
@@ -215,11 +280,11 @@ function Renderer(atlas) {
 			gl.canvas.height = this.h
 			gl.viewport(0, 0, this.w, this.h)
 
-			xscale = .2
-			yscale = xscale * (this.w / this.h)
+			this.xscale = .2
+			this.yscale = this.xscale * (this.w / this.h)
 
-			xrad = xscale * .5
-			yrad = yscale * .5
+			this.xrad = this.xscale * .5
+			this.yrad = this.yscale * .5
 
 			verts = 0
 		},
@@ -232,8 +297,9 @@ function Renderer(atlas) {
 			const size = atlas.sizes[sprite]
 			h *= size[0]
 			v *= size[1]
-			x *= xscale
-			y *= yscale
+			x *= this.xscale
+			y *= this.yscale
+			const xr = this.xrad, yr = this.yrad
 			setQuad(
 				verts,
 				sprite,
@@ -242,10 +308,10 @@ function Renderer(atlas) {
 				// | o |
 				// |/  |
 				// 2---3
-				x - xrad * h, y + yrad * v,
-				x + xrad * h, y + yrad * v,
-				x - xrad * h, y - yrad * v,
-				x + xrad * h, y - yrad * v
+				x - xr * h, y + yr * v,
+				x + xr * h, y + yr * v,
+				x - xr * h, y - yr * v,
+				x + xr * h, y - yr * v
 			)
 			verts += 6
 		},
