@@ -137,6 +137,7 @@ function Renderer(atlas) {
 
 	gl.enable(gl.BLEND)
 	gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
+	gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1)
 
 	gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer())
 
