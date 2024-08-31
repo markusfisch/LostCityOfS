@@ -159,6 +159,14 @@ function Game(renderer) {
 	}
 	window.onresize()
 
+	const shakePattern = [.1, .4, .7, .3, .5, .2],
+		shakeLength = shakePattern.length,
+		shakeDuration = 300
+	let shakeUntil = 0
+	function shake() {
+		shakeUntil = Date.now() + shakeDuration
+	}
+
 	function compareY(a, b) {
 		return b.y - a.y
 	}
@@ -191,6 +199,13 @@ function Game(renderer) {
 			vy = lookY * renderer.y
 		vx = Math.min(Math.max(vx, viewXMax), viewXMin),
 		vy = Math.min(Math.max(vy, viewYMin), viewYMax)
+
+		if (shakeUntil > now) {
+			const p = (shakeUntil - now) / shakeDuration * .05
+			vx += shakePattern[(now + 1) % shakeLength] * p
+			vy += shakePattern[now % shakeLength] * p
+		}
+
 		renderer.r(vx, vy)
 	}
 	run()
