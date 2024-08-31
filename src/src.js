@@ -135,7 +135,6 @@ function Renderer(atlas) {
 
 	gl.enable(gl.BLEND)
 	gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
-	gl.clearColor(0.15, 0.62, 0.54, 1)
 
 	gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer())
 
@@ -171,7 +170,11 @@ function Renderer(atlas) {
 	enableVertexAttrib('t', 2, elementsPerVertex, 2)
 
 	const camLoc = gl.getUniformLocation(program, 'c'),
+		moodLoc = gl.getUniformLocation(program, 'm'),
 		nudge = .5 / atlas.canvas.width
+
+	gl.clearColor(0, 0, 0, 1)
+	gl.uniform4f(moodLoc, 1, 1, 1, 1)
 
 	function setQuad(
 		idx,

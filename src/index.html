@@ -71,9 +71,10 @@ precision mediump float;
 varying vec2 u;
 
 uniform sampler2D s;
+uniform vec4 m;
 
 void main() {
-	gl_FragColor = texture2D(s, u).rgba;
+	gl_FragColor = texture2D(s, u).rgba * m;
 }
 </script>
 <script src="src.js"></script>
