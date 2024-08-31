@@ -71,9 +71,6 @@ function Game(renderer) {
 	document.ontouchleave = pointerCancel
 	document.ontouchcancel = pointerCancel
 
-	window.onresize = renderer.s
-	renderer.s()
-
 	const entities = []
 	for (let i = 0; i < 10; ++i) {
 		const sprite = i % 2
@@ -87,13 +84,22 @@ function Game(renderer) {
 	}
 
 	const mapCols = 32, mapRows = 32, map = []
-	for (let y = 0, i = 0; y < mapRows; ++y) {
-		for (let x = 0; x < mapCols; ++x, ++i) {
-			map[i] = (x + y) % 2
-			renderer.p(map[i], x - 16, -y + 16)
+	function pushMap() {
+		map.length = 0
+		for (let y = 0, i = 0; y < mapRows; ++y) {
+			for (let x = 0; x < mapCols; ++x, ++i) {
+				map[i] = (x + y) % 2
+				renderer.p(map[i], x - 16, -y + 16)
+			}
 		}
+		renderer.m()
 	}
-	renderer.m()
+
+	window.onresize = function() {
+		renderer.s()
+		pushMap()
+	}
+	window.onresize()
 
 	function compareY(a, b) {
 		return b.y - a.y
@@ -208,6 +214,8 @@ function Renderer(atlas) {
 
 			xrad = xscale * .5
 			yrad = yscale * .5
+
+			verts = 0
 		},
 		m: function() {
 			this.base = verts
