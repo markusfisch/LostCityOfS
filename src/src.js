@@ -145,10 +145,10 @@ function Game(renderer) {
 	window.onresize = function() {
 		renderer.s()
 
-		viewXMin = -1 + renderer.xrad
-		viewXMax = -mapCols * renderer.xscale + 1 + renderer.xrad
-		viewYMin = 1 - renderer.yrad
-		viewYMax = mapRows * renderer.yscale - 1 - renderer.yrad
+		viewXMin = -1 + renderer.u
+		viewXMax = -mapCols * renderer.x + 1 + renderer.u
+		viewYMin = 1 - renderer.v
+		viewYMax = mapRows * renderer.y - 1 - renderer.v
 
 		pushMap()
 	}
@@ -180,8 +180,8 @@ function Game(renderer) {
 			lookX = lookX * .9 + player.x * .1
 			lookY = lookY * .9 + player.y * .1
 		}
-		let vx = -lookX * renderer.xscale,
-			vy = lookY * renderer.yscale
+		let vx = -lookX * renderer.x,
+			vy = lookY * renderer.y
 		vx = Math.min(Math.max(vx, viewXMax), viewXMin),
 		vy = Math.min(Math.max(vy, viewYMin), viewYMax)
 		renderer.r(vx, vy)
@@ -268,10 +268,10 @@ function Renderer(atlas) {
 		// One letter keys because esbuild won't compress these.
 		w: 0,
 		h: 0,
-		xscale: 0,
-		yscale: 0,
-		xrad: 0,
-		yrad: 0,
+		x: 0,
+		y: 0,
+		u: 0,
+		v: 0,
 		s: function() {
 			this.w = gl.canvas.clientWidth
 			this.h = gl.canvas.clientHeight
@@ -280,11 +280,11 @@ function Renderer(atlas) {
 			gl.canvas.height = this.h
 			gl.viewport(0, 0, this.w, this.h)
 
-			this.xscale = .2
-			this.yscale = this.xscale * (this.w / this.h)
+			this.x = .2
+			this.y = this.x * (this.w / this.h)
 
-			this.xrad = this.xscale * .5
-			this.yrad = this.yscale * .5
+			this.u = this.x * .5
+			this.v = this.y * .5
 
 			verts = 0
 		},
@@ -297,9 +297,9 @@ function Renderer(atlas) {
 			const size = atlas.sizes[sprite]
 			h *= size[0]
 			v *= size[1]
-			x *= this.xscale
-			y *= this.yscale
-			const xr = this.xrad, yr = this.yrad
+			x *= this.x
+			y *= this.y
+			const xr = this.u, yr = this.v
 			setQuad(
 				verts,
 				sprite,
