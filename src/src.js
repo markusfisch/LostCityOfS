@@ -219,7 +219,7 @@ function Game(renderer) {
 		entities.sort(compareY)
 		for (let i = entities.length; i-- > 0;) {
 			const e = entities[i]
-			renderer.pushScaled(e.update(), e.x, -e.y, e.dx, e.dy)
+			renderer.pushScaled(e.update(), e.x, -e.y, e.dx, e.dy, 1)
 		}
 
 		if (pointers) {
@@ -333,10 +333,15 @@ function Renderer(atlas) {
 		mark: function() {
 			this.base = verts
 		},
-		push: function(sprite, x, y, h, v) {
-			const size = atlas.sizes[sprite]
+		push: function(sprite, x, y, h, v, b) {
+			const size = atlas.sizes[sprite], sy = size[1]
 			h = (h || 1) * size[0]
-			v = (v || 1) * size[1]
+			v = (v || 1) * sy
+			if (b) {
+				// Align taller sprites to the default base line
+				// so depth comparison works.
+				y += (sy - 1) * y2
+			}
 			setQuad(
 				verts,
 				sprite,
@@ -352,8 +357,8 @@ function Renderer(atlas) {
 			)
 			verts += 6
 		},
-		pushScaled: function(sprite, x, y, h, v) {
-			this.push(sprite, x * this.xscale, y * this.yscale, h, v)
+		pushScaled: function(sprite, x, y, h, v, b) {
+			this.push(sprite, x * this.xscale, y * this.yscale, h, v, b)
 		},
 		render: function(x, y) {
 			gl.uniform2f(camLoc, x, y)
