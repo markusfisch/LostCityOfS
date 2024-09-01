@@ -1,8 +1,7 @@
 "use strict"
 
 function Game(renderer) {
-	const hasTouch = 'ontouchstart' in document,
-		pointersX = [], pointersY = [], keysDown = [],
+	const pointersX = [], pointersY = [], keysDown = [],
 		mapCols = 32, mapRows = 32, map = [],
 		centerX = mapCols >> 1, centerY = mapRows >> 1,
 		entities = [],
@@ -15,10 +14,10 @@ function Game(renderer) {
 		viewXMin, viewXMax, viewYMin, viewYMax,
 		lookX = centerX, lookY = centerY,
 		shakeUntil = 0,
-		last = 0, warp
+		now, warp, last = 0
 
 	// Prevent pinch/zoom on iOS 11.
-	if (hasTouch) {
+	if ('ontouchstart' in document) {
 		document.addEventListener('gesturestart', function(event) {
 			event.preventDefault()
 		}, false)
@@ -34,6 +33,7 @@ function Game(renderer) {
 		e.x = Math.min(mapCols - 1, Math.max(e.x + x, 0))
 		e.y = Math.min(mapRows - 1, Math.max(e.y + y, 0))
 		e.dx = x < 0 ? -1 : 1
+		e.moving = Math.abs(x) + Math.abs(y) > 0
 	}
 
 	function setPointer(event, down) {
@@ -98,7 +98,7 @@ function Game(renderer) {
 		keysDown[event.keyCode] = true
 	}
 
-	function input(now) {
+	function input() {
 		const step = .05 * warp
 		let x = 0, y = 0
 		if (keysDown[37] || keysDown[72]) {
@@ -141,6 +141,7 @@ function Game(renderer) {
 				this.y += this.vy * warp
 				this.x %= mapCols
 				this.y %= mapRows
+				return this.sprite
 			}
 		})
 	}
@@ -152,7 +153,12 @@ function Game(renderer) {
 		vy: 0,
 		dx: 1,
 		dy: 1,
-		update: function() {}
+		frame: 0,
+		moving: false,
+		update: function() {
+			const frame = Math.round((now % 300) / 100) % 3
+			return this.sprite + (this.moving ? frame : 0)
+		}
 	}
 	entities.push(player)
 
@@ -169,7 +175,10 @@ function Game(renderer) {
 		for (let y = 0, i = 0; y < mapRows; ++y) {
 			for (let x = 0; x < mapCols; ++x, ++i) {
 				map[i] = 1 + (x + y) % 2
-				renderer.pushScaled(map[i], x, -y)
+				//renderer.pushScaled(map[i], x, -y)
+				renderer.pushScaled(map[i],
+					Math.random() * x,
+					Math.random() * -y)
 			}
 		}
 		renderer.mark()
@@ -180,42 +189,42 @@ function Game(renderer) {
 		return b.y - a.y
 	}
 
+	function clamp(value, min, max) {
+		return Math.min(Math.max(value, min), max)
+	}
+
 	function run() {
 		requestAnimationFrame(run)
 
-		const now = Date.now()
+		now = Date.now()
 		warp = (now - last) / 16
 		last = now
 
-		input(now)
+		input()
 
-		const dx = lookX - player.x,
-			dz = lookY - player.y,
-			d = dx*dx + dz*dz
-		if (d > .01) {
-			lookX = lookX * .9 + player.x * .1
-			lookY = lookY * .9 + player.y * .1
+		const px = player.x, py = player.y,
+			dx = lookX - px, dy = lookY - py
+		if (dx*dx + dy*dy > .01) {
+			lookX = lookX * .9 + px * .1
+			lookY = lookY * .9 + py * .1
 		}
-		let vx = -lookX * renderer.xscale,
-			vy = lookY * renderer.yscale
-		vx = Math.min(Math.max(vx, viewXMax), viewXMin),
-		vy = Math.min(Math.max(vy, viewYMin), viewYMax)
+		let vx = clamp(-lookX * renderer.xscale, viewXMax, viewXMin),
+			vy = clamp(lookY * renderer.yscale, viewYMin, viewYMax)
 		if (shakeUntil > now) {
-			const p = (shakeUntil - now) / shakeDuration * .05
-			vx += shakePattern[(now + 1) % shakeLength] * p
-			vy += shakePattern[now % shakeLength] * p
+			const power = (shakeUntil - now) / shakeDuration * .05
+			vx += shakePattern[(now + 1) % shakeLength] * power
+			vy += shakePattern[now % shakeLength] * power
 		}
 
 		entities.sort(compareY)
 		for (let i = entities.length; i-- > 0;) {
 			const e = entities[i]
-			e.update()
-			renderer.pushScaled(e.sprite, e.x, -e.y, e.dx, e.dy)
+			renderer.pushScaled(e.update(), e.x, -e.y, e.dx, e.dy)
 		}
 
-		if (pointers > 0) {
-			let s = Math.max(.1, Math.min(1, 1 - stickDelta / .05))
-			renderer.push(0, -vx + stickX, -vy + stickY, s, s)
+		if (pointers) {
+			let size = clamp(1 - stickDelta / .05, .1, 1)
+			renderer.push(0, -vx + stickX, -vy + stickY, size, size)
 			renderer.push(0, -vx + pointersX[0], -vy + pointersY[0])
 		}
 
@@ -325,13 +334,9 @@ function Renderer(atlas) {
 			this.base = verts
 		},
 		push: function(sprite, x, y, h, v) {
-			h = h || 1
-			v = v || 1
-
 			const size = atlas.sizes[sprite]
-			h *= size[0]
-			v *= size[1]
-
+			h = (h || 1) * size[0]
+			v = (v || 1) * size[1]
 			setQuad(
 				verts,
 				sprite,
