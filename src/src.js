@@ -11,6 +11,7 @@ function Game(renderer) {
 		shakeDuration = 300
 
 	let pointers = 0,
+		stickX, stickY, stickDelta,
 		viewXMin, viewXMax, viewYMin, viewYMax,
 		lookX = centerX, lookY = centerY,
 		shakeUntil = 0,
@@ -27,6 +28,12 @@ function Game(renderer) {
 		document.addEventListener('gestureend', function(event) {
 			event.preventDefault()
 		}, false)
+	}
+
+	function moveBy(e, x, y) {
+		e.x = Math.min(mapCols - 1, Math.max(e.x + x, 0))
+		e.y = Math.min(mapRows - 1, Math.max(e.y + y, 0))
+		e.dx = x < 0 ? -1 : 1
 	}
 
 	function setPointer(event, down) {
@@ -48,8 +55,8 @@ function Game(renderer) {
 
 		// Map to WebGL coordinates.
 		for (let i = pointers; i--;) {
-			pointersX[i] = (2 * pointersX[i]) / renderer.w - 1
-			pointersY[i] = 1 - (2 * pointersY[i]) / renderer.h
+			pointersX[i] = (2 * pointersX[i]) / renderer.width - 1
+			pointersY[i] = 1 - (2 * pointersY[i]) / renderer.height
 		}
 
 		event.stopPropagation()
@@ -69,6 +76,8 @@ function Game(renderer) {
 
 	function pointerDown(event) {
 		setPointer(event, 1)
+		stickX = pointersX[0]
+		stickY = pointersY[0]
 	}
 
 	document.onmousedown = pointerDown
@@ -107,14 +116,20 @@ function Game(renderer) {
 		if (keysDown[32]) {
 			shakeUntil = now + shakeDuration
 		}
-		player.x = Math.min(mapCols - 1, Math.max(player.x + x, 0))
-		player.y = Math.min(mapRows - 1, Math.max(player.y + y, 0))
+		if (pointers) {
+			const dx = stickX - pointersX[0],
+				dy = stickY - pointersY[0]
+			stickDelta = dx*dx + dy*dy
+			x -= Math.max(-step, Math.min(dx * warp, step))
+			y += Math.max(-step, Math.min(dy * warp, step))
+		}
+		moveBy(player, x, y)
 	}
 
 	for (let i = 0; i < 10; ++i) {
 		const sprite = i % 2
 		entities.push({
-			sprite: 2 + sprite,
+			sprite: 3 + sprite,
 			x: centerX + Math.random() * mapCols - centerX,
 			y: centerY + Math.random() * mapRows - centerY,
 			vx: sprite ? .01 : 0,
@@ -130,7 +145,7 @@ function Game(renderer) {
 		})
 	}
 	const player = {
-		sprite: 4,
+		sprite: 5,
 		x: lookX,
 		y: lookY,
 		vx: 0,
@@ -142,7 +157,7 @@ function Game(renderer) {
 	entities.push(player)
 
 	window.onresize = function() {
-		renderer.s()
+		renderer.resize()
 
 		const x2 = renderer.xscale / 2, y2 = renderer.yscale / 2
 		viewXMin = -1 + x2
@@ -153,11 +168,11 @@ function Game(renderer) {
 		map.length = 0
 		for (let y = 0, i = 0; y < mapRows; ++y) {
 			for (let x = 0; x < mapCols; ++x, ++i) {
-				map[i] = (x + y) % 2
-				renderer.p(map[i], x, -y)
+				map[i] = 1 + (x + y) % 2
+				renderer.pushScaled(map[i], x, -y)
 			}
 		}
-		renderer.m()
+		renderer.mark()
 	}
 	window.onresize()
 
@@ -173,13 +188,6 @@ function Game(renderer) {
 		last = now
 
 		input(now)
-
-		entities.sort(compareY)
-		for (let i = entities.length; i-- > 0;) {
-			const e = entities[i]
-			e.update()
-			renderer.p(e.sprite, e.x, -e.y, e.dx, e.dy)
-		}
 
 		const dx = lookX - player.x,
 			dz = lookY - player.y,
@@ -198,7 +206,20 @@ function Game(renderer) {
 			vy += shakePattern[now % shakeLength] * p
 		}
 
-		renderer.r(vx, vy)
+		entities.sort(compareY)
+		for (let i = entities.length; i-- > 0;) {
+			const e = entities[i]
+			e.update()
+			renderer.pushScaled(e.sprite, e.x, -e.y, e.dx, e.dy)
+		}
+
+		if (pointers > 0) {
+			let s = Math.max(.1, Math.min(1, 1 - stickDelta / .05))
+			renderer.push(0, -vx + stickX, -vy + stickY, s, s)
+			renderer.push(0, -vx + pointersX[0], -vy + pointersY[0])
+		}
+
+		renderer.render(vx, vy)
 	}
 	run()
 }
@@ -280,39 +301,36 @@ function Renderer(atlas) {
 	let verts = 0, x2, y2
 	return {
 		// One letter keys because esbuild won't compress these.
-		w: 0,
-		h: 0,
+		width: 0,
+		height: 0,
 		xscale: 0,
 		yscale: 0,
-		s: function() {
-			this.w = gl.canvas.clientWidth
-			this.h = gl.canvas.clientHeight
+		resize: function() {
+			this.width = gl.canvas.clientWidth
+			this.height = gl.canvas.clientHeight
 
-			gl.canvas.width = this.w
-			gl.canvas.height = this.h
-			gl.viewport(0, 0, this.w, this.h)
+			gl.canvas.width = this.width
+			gl.canvas.height = this.height
+			gl.viewport(0, 0, this.width, this.height)
 
 			this.xscale = .2
-			this.yscale = this.xscale * (this.w / this.h)
+			this.yscale = this.xscale * (this.width / this.height)
 
 			x2 = this.xscale / 2
 			y2 = this.yscale / 2
 
 			verts = 0
 		},
-		m: function() {
+		mark: function() {
 			this.base = verts
 		},
-		p: function(sprite, x, y, h, v) {
+		push: function(sprite, x, y, h, v) {
 			h = h || 1
 			v = v || 1
 
 			const size = atlas.sizes[sprite]
 			h *= size[0]
 			v *= size[1]
-
-			x *= this.xscale
-			y *= this.yscale
 
 			setQuad(
 				verts,
@@ -329,7 +347,10 @@ function Renderer(atlas) {
 			)
 			verts += 6
 		},
-		r: function(x, y) {
+		pushScaled: function(sprite, x, y, h, v) {
+			this.push(sprite, x * this.xscale, y * this.yscale, h, v)
+		},
+		render: function(x, y) {
 			gl.uniform2f(camLoc, x, y)
 			gl.bufferData(gl.ARRAY_BUFFER, bufferData, gl.DYNAMIC_DRAW)
 			gl.clear(gl.COLOR_BUFFER_BIT)
