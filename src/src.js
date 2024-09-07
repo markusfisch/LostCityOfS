@@ -138,6 +138,11 @@ function Game(renderer) {
 			dx: Math.random() > .5 ? 1 : -1,
 			dy: 1,
 			update: function() {
+				const dx = player.x - this.x,
+					dy = player.y - this.y
+				if (dx*dx + dy*dy < 1) {
+					shakeUntil = now + shakeDuration
+				}
 				this.x += this.vx * warp
 				this.y += this.vy * warp
 				this.x %= mapCols
