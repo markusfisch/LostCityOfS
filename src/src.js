@@ -130,7 +130,6 @@ function Game(renderer) {
 	for (let i = 0; i < 10; ++i) {
 		const sprite = i % 2
 		entities.push({
-			sprite: 3 + sprite,
 			x: centerX + Math.random() * mapCols - centerX,
 			y: centerY + Math.random() * mapRows - centerY,
 			vx: sprite ? .01 : 0,
@@ -147,12 +146,11 @@ function Game(renderer) {
 				this.y += this.vy * warp
 				this.x %= mapCols
 				this.y %= mapRows
-				return this.sprite
+				return 3 + sprite
 			}
 		})
 	}
 	const player = {
-		sprite: 5,
 		x: lookX,
 		y: lookY,
 		vx: 0,
@@ -161,7 +159,7 @@ function Game(renderer) {
 		dy: 1,
 		moving: false,
 		update: function() {
-			return this.sprite + (this.moving
+			return 5 + (this.moving
 					? Math.round((now % 300) / 100) % 3
 					: Math.round((now % 1000) / 500) % 2)
 		}
