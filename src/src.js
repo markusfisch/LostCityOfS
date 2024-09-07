@@ -218,11 +218,14 @@ function Game(renderer) {
 			lookY = lookY * .9 + py * .1
 		}
 		let vx = clamp(-lookX * renderer.xscale, viewXMax, viewXMin),
-			vy = clamp(lookY * renderer.yscale, viewYMin, viewYMax)
+			vy = clamp(lookY * renderer.yscale, viewYMin, viewYMax),
+			r = 1, g = 1, b = 1
 		if (shakeUntil > now) {
-			const power = (shakeUntil - now) / shakeDuration * .05
-			vx += shakePattern[(now + 1) % shakeLength] * power
-			vy += shakePattern[now % shakeLength] * power
+			const power = (shakeUntil - now) / shakeDuration,
+				shakePower = power * .05
+			vx += shakePattern[(now + 1) % shakeLength] * shakePower
+			vy += shakePattern[now % shakeLength] * shakePower
+			g = b = 1 - power
 		}
 
 		pushMap(vx, vy)
@@ -240,7 +243,7 @@ function Game(renderer) {
 			renderer.push(0, -vx + pointersX[0], -vy + pointersY[0])
 		}
 
-		renderer.render(vx, vy)
+		renderer.render(vx, vy, r, g, b)
 	}
 	run()
 }
@@ -294,7 +297,6 @@ function Renderer(atlas) {
 		nudge = .5 / atlas.canvas.width
 
 	gl.clearColor(0, 0, 0, 1)
-	gl.uniform4f(moodLoc, 1, 1, 1, 1)
 
 	function setQuad(
 		idx,
@@ -369,8 +371,9 @@ function Renderer(atlas) {
 		pushScaled: function(sprite, x, y, h, v, b) {
 			this.push(sprite, x * this.xscale, y * this.yscale, h, v, b)
 		},
-		render: function(x, y) {
+		render: function(x, y, r, g, b) {
 			gl.uniform2f(camLoc, x, y)
+			gl.uniform4f(moodLoc, r, g, b, 1)
 			gl.bufferData(gl.ARRAY_BUFFER, bufferData, gl.DYNAMIC_DRAW)
 			gl.clear(gl.COLOR_BUFFER_BIT)
 			gl.drawArrays(gl.TRIANGLES, 0, verts)
