@@ -311,14 +311,36 @@ function Renderer(atlas) {
 			t = atlas.coords[offset + 1] + nudge,
 			r = atlas.coords[offset + 6] - nudge,
 			b = atlas.coords[offset + 7] - nudge
-		bufferData.set([
-			x1, y1, l, t,
-			x2, y2, r, t,
-			x3, y3, l, b,
-			x2, y2, r, t,
-			x3, y3, l, b,
-			x4, y4, r, b,
-		], idx * elementsPerVertex)
+		let i = idx * elementsPerVertex
+		bufferData[i++] = x1
+		bufferData[i++] = y1
+		bufferData[i++] = l
+		bufferData[i++] = t
+
+		bufferData[i++] = x2
+		bufferData[i++] = y2
+		bufferData[i++] = r
+		bufferData[i++] = t
+
+		bufferData[i++] = x3
+		bufferData[i++] = y3
+		bufferData[i++] = l
+		bufferData[i++] = b
+
+		bufferData[i++] = x2
+		bufferData[i++] = y2
+		bufferData[i++] = r
+		bufferData[i++] = t
+
+		bufferData[i++] = x3
+		bufferData[i++] = y3
+		bufferData[i++] = l
+		bufferData[i++] = b
+
+		bufferData[i++] = x4
+		bufferData[i++] = y4
+		bufferData[i++] = r
+		bufferData[i++] = b
 	}
 
 	let verts = 0, x2, y2
