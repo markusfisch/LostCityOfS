@@ -5,7 +5,7 @@ function Game(renderer) {
 		mapCols = 32, mapRows = 32, map = [],
 		centerX = mapCols >> 1, centerY = mapRows >> 1,
 		entities = [],
-		shakePattern = [.1, .4, .7, .3, .5, .2],
+		shakePattern = [.1, -.4, .7, -.3, .5, .2],
 		shakeLength = shakePattern.length,
 		shakeDuration = 300
 
