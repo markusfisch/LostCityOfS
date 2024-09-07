@@ -3,7 +3,6 @@
 function Game(renderer) {
 	const pointersX = [], pointersY = [], keysDown = [],
 		mapCols = 32, mapRows = 32, map = [],
-		centerX = mapCols >> 1, centerY = mapRows >> 1,
 		entities = [],
 		shakePattern = [.1, -.4, .7, -.3, .5, .2],
 		shakeLength = shakePattern.length,
@@ -12,7 +11,7 @@ function Game(renderer) {
 	let pointers = 0,
 		stickX, stickY, stickDelta,
 		viewXMin, viewXMax, viewYMin, viewYMax,
-		lookX = centerX, lookY = centerY,
+		lookX = mapCols >> 1, lookY = mapRows >> 1,
 		shakeUntil = 0,
 		now, warp, last = 0
 
@@ -130,8 +129,8 @@ function Game(renderer) {
 	for (let i = 0; i < 10; ++i) {
 		const sprite = i % 2
 		entities.push({
-			x: centerX + Math.random() * mapCols - centerX,
-			y: centerY + Math.random() * mapRows - centerY,
+			x: Math.random() * mapCols,
+			y: Math.random() * mapRows,
 			vx: sprite ? .01 : 0,
 			vy: sprite ? 0 : .01,
 			dx: Math.random() > .5 ? 1 : -1,
