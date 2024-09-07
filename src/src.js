@@ -126,6 +126,7 @@ function Game(renderer) {
 		moveBy(player, x, y)
 	}
 
+	// Create entities.
 	for (let i = 0; i < 10; ++i) {
 		const sprite = i % 2
 		entities.push({
@@ -162,6 +163,13 @@ function Game(renderer) {
 	}
 	entities.push(player)
 
+	// Create map.
+	for (let y = 0, i = 0; y < mapRows; ++y) {
+		for (let x = 0; x < mapCols; ++x, ++i) {
+			map[i] = 1 + (x + y) % 2
+		}
+	}
+
 	window.onresize = function() {
 		renderer.resize()
 
@@ -170,20 +178,21 @@ function Game(renderer) {
 		viewXMax = -mapCols * renderer.xscale + 1 + x2
 		viewYMin = 1 - y2
 		viewYMax = mapRows * renderer.yscale - 1 - y2
-
-		map.length = 0
-		for (let y = 0, i = 0; y < mapRows; ++y) {
-			for (let x = 0; x < mapCols; ++x, ++i) {
-				map[i] = 1 + (x + y) % 2
-				//renderer.pushScaled(map[i], x, -y)
-				renderer.pushScaled(map[i],
-					Math.random() * x,
-					Math.random() * -y)
-			}
-		}
-		renderer.mark()
 	}
 	window.onresize()
+
+	function pushMap(vx, vy) {
+		const l = Math.max(0, Math.floor((viewXMin - vx) / renderer.xscale)),
+			r = Math.min(mapCols, l + Math.ceil(2 / renderer.xscale) + 1),
+			t = Math.max(0, Math.floor((vy - viewYMin) / renderer.yscale)),
+			b = Math.min(mapRows, t + Math.ceil(2 / renderer.yscale) + 1),
+			skip = mapCols - (r - l)
+		for (let i = t * mapCols + l, y = t; y < b; ++y, i += skip) {
+			for (let x = l; x < r; ++x, ++i) {
+				renderer.pushScaled(map[i], x, -y)
+			}
+		}
+	}
 
 	function compareY(a, b) {
 		return b.y - a.y
@@ -216,12 +225,15 @@ function Game(renderer) {
 			vy += shakePattern[now % shakeLength] * power
 		}
 
+		pushMap(vx, vy)
+
 		entities.sort(compareY)
 		for (let i = entities.length; i-- > 0;) {
 			const e = entities[i]
 			renderer.pushScaled(e.update(), e.x, -e.y, e.dx, e.dy, 1)
 		}
 
+		// Virtual touch stick.
 		if (pointers) {
 			let size = clamp(1 - stickDelta / .05, .1, 1)
 			renderer.push(0, -vx + stickX, -vy + stickY, size, size)
@@ -330,9 +342,6 @@ function Renderer(atlas) {
 
 			verts = 0
 		},
-		mark: function() {
-			this.base = verts
-		},
 		push: function(sprite, x, y, h, v, b) {
 			const size = atlas.sizes[sprite], sy = size[1]
 			h = (h || 1) * size[0]
@@ -365,7 +374,7 @@ function Renderer(atlas) {
 			gl.bufferData(gl.ARRAY_BUFFER, bufferData, gl.DYNAMIC_DRAW)
 			gl.clear(gl.COLOR_BUFFER_BIT)
 			gl.drawArrays(gl.TRIANGLES, 0, verts)
-			verts = this.base
+			verts = 0
 		}
 	}
 }
