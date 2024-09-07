@@ -159,11 +159,11 @@ function Game(renderer) {
 		vy: 0,
 		dx: 1,
 		dy: 1,
-		frame: 0,
 		moving: false,
 		update: function() {
-			const frame = Math.round((now % 300) / 100) % 3
-			return this.sprite + (this.moving ? frame : 0)
+			return this.sprite + (this.moving
+					? Math.round((now % 300) / 100) % 3
+					: Math.round((now % 1000) / 500) % 2)
 		}
 	}
 	entities.push(player)
