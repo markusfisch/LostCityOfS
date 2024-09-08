@@ -232,7 +232,7 @@ function Game(renderer) {
 		// Animate view to player position.
 		const px = player.x, py = player.y,
 			dx = lookX - px, dy = lookY - py
-		if (dx*dx + dy*dy > .01) {
+		if (dx*dx + dy*dy > .0001) {
 			lookX = lookX * .9 + px * .1
 			lookY = lookY * .9 + py * .1
 		}
