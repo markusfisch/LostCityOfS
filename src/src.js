@@ -349,7 +349,6 @@ function Renderer(atlas) {
 
 	let verts = 0, x2, y2
 	return {
-		// One letter keys because esbuild won't compress these.
 		width: 0,
 		height: 0,
 		xscale: 0,
