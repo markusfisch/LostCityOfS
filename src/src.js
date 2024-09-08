@@ -229,6 +229,8 @@ function Game(renderer) {
 			vy += shakePattern[now % shakeLength] * shakePower
 			g = b = 1 - power
 		}
+		renderer.viewX = vx
+		renderer.viewY = vy
 
 		pushMap(vx, vy)
 
@@ -245,7 +247,7 @@ function Game(renderer) {
 			renderer.push(0, -vx + pointersX[0], -vy + pointersY[0])
 		}
 
-		renderer.render(vx, vy, r, g, b)
+		renderer.render(r, g, b)
 	}
 	run()
 }
@@ -352,6 +354,8 @@ function Renderer(atlas) {
 		height: 0,
 		xscale: 0,
 		yscale: 0,
+		viewX: 0,
+		viewY: 0,
 		resize: function() {
 			this.width = gl.canvas.clientWidth
 			this.height = gl.canvas.clientHeight
@@ -369,6 +373,10 @@ function Renderer(atlas) {
 			verts = 0
 		},
 		push: function(sprite, x, y, h, v, b) {
+			const fx = x + this.viewX, fy = y + this.viewY
+			if (fx < -1.2 || fy > 1.2 || fx > 1.2 || fy < -1.2) {
+				return
+			}
 			const size = atlas.sizes[sprite], sy = size[1]
 			h = (h || 1) * size[0]
 			v = (v || 1) * sy
@@ -395,8 +403,8 @@ function Renderer(atlas) {
 		pushScaled: function(sprite, x, y, h, v, b) {
 			this.push(sprite, x * this.xscale, y * this.yscale, h, v, b)
 		},
-		render: function(x, y, r, g, b) {
-			gl.uniform2f(camLoc, x, y)
+		render: function(r, g, b) {
+			gl.uniform2f(camLoc, this.viewX, this.viewY)
 			gl.uniform4f(moodLoc, r, g, b, 1)
 			gl.bufferData(gl.ARRAY_BUFFER, bufferData, gl.DYNAMIC_DRAW)
 			gl.clear(gl.COLOR_BUFFER_BIT)
