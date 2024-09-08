@@ -2,7 +2,8 @@
 
 function Game(renderer) {
 	const pointersX = [], pointersY = [], keysDown = [],
-		mapRadius = 20, map = [], entities = [], particles = [],
+		map = [], entities = [], particles = [], blockables = [],
+		mapRadius = 20,
 		shakePattern = [.1, -.4, .7, -.3, .5, .2],
 		shakeLength = shakePattern.length,
 		shakeDuration = 300
@@ -28,8 +29,17 @@ function Game(renderer) {
 	}
 
 	function moveBy(e, x, y) {
-		e.x += x
-		e.y += y
+		let nx = e.x + x,
+			ny = e.y + y
+		for (let i = blockables.length; i--; ) {
+			const b = blockables[i]
+			if (Math.abs(b.x - nx) < .5 &&
+					Math.abs(b.y - ny) < .5) {
+				return
+			}
+		}
+		e.x = nx
+		e.y = ny
 		e.dx = x < 0 ? -1 : 1
 		e.moving = Math.abs(x) + Math.abs(y) > 0
 	}
@@ -147,13 +157,15 @@ function Game(renderer) {
 		--y
 	}
 
-	// Create stuff.
+	// Create blocking stuff.
 	for (let i = 0; i < 1000; ++i) {
-		entities.push({
+		const e = {
 			x: cr() * 30,
 			y: random() * -100,
 			update: () => 0
-		})
+		}
+		blockables.push(e)
+		entities.push(e)
 	}
 
 	// Create enemies.
@@ -275,7 +287,7 @@ function Game(renderer) {
 					e.dx, e.dy)
 		}
 
-		// Sort and push entities.
+		// Push entities.
 		entities.sort(compareY)
 		for (let i = entities.length; i-- > 0;) {
 			const e = entities[i]
