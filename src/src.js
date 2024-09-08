@@ -126,57 +126,46 @@ function Game(renderer) {
 		return (seed = (seed * 9301 + 49297) % 233280) / 233280
 	}
 
-	function randomCoord() {
-		return (random() - .5) * 2 * mapRadius
+	function cr() {
+		return random() - .5
 	}
 
 	function offMap(e) {
 		return Math.abs(e.x) > mapRadius || Math.abs(e.y) > mapRadius
 	}
 
-	// Map
-	for (let i = 0; i < 1000; ++i) {
+	// Create map.
+	for (let i = 0, x = 0, y = 0; i < 1000; ++i) {
 		const sprite = 1 + i % 2
 		map.push({
-			x: randomCoord(),
-			y: randomCoord(),
-			dx: 1 + random() * 2,
-			dy: 1 + random() * 2,
+			x: x,
+			y: y,
+			dx: 1 + random(),
 			update: () => sprite
 		})
+		x += cr()
+		--y
 	}
 
-	// Create particles.
-	for (let i = 0; i < 16; ++i) {
-		particles.push({
-			x: (random() - .5) * 2,
-			y: (random() - .5) * 2,
-			vx: .002 + random() * .002,
-			vy: .002 + random() * .002,
-			update: function() {
-				this.x += this.vx * warp
-				this.y += this.vy * warp
-				const rx = this.x + renderer.viewX,
-					ry = this.y - renderer.viewY
-				if (Math.abs(rx) > 1.1 || Math.abs(ry) > 1.1) {
-					this.x = -renderer.viewX + -rx
-					this.y = renderer.viewY + -ry
-				}
-				return 9
-			}
+	// Create stuff.
+	for (let i = 0; i < 1000; ++i) {
+		entities.push({
+			x: cr() * 30,
+			y: random() * -100,
+			update: () => 0
 		})
 	}
 
 	// Create enemies.
-	for (let i = 0; i < 10; ++i) {
-		const sprite = i % 2
+	for (let i = 0, y = -2; i < 10; ++i, y -= 2) {
+		const sprite = i % 2,
+			vx = sprite ? .01 : -.01
 		entities.push({
-			x: randomCoord(),
-			y: randomCoord(),
-			vx: sprite ? .01 : 0,
-			vy: sprite ? 0 : .01,
-			dx: random() > .5 ? 1 : -1,
-			dy: 1,
+			x: cr() * 3,
+			y: y,
+			vx: vx,
+			vy: 0,
+			dx: vx > 0 ? 1 : -1,
 			update: function() {
 				const dx = player.x - this.x,
 					dy = player.y - this.y
@@ -206,6 +195,27 @@ function Game(renderer) {
 		}
 	}
 	entities.push(player)
+
+	// Create particles.
+	for (let i = 0; i < 16; ++i) {
+		particles.push({
+			x: cr() * 2,
+			y: cr() * 2,
+			vx: .002 + random() * .002,
+			vy: .002 + random() * .002,
+			update: function() {
+				this.x += this.vx * warp
+				this.y += this.vy * warp
+				const rx = this.x + renderer.viewX,
+					ry = this.y - renderer.viewY
+				if (Math.abs(rx) > 1.1 || Math.abs(ry) > 1.1) {
+					this.x = -renderer.viewX + -rx
+					this.y = renderer.viewY + -ry
+				}
+				return 9
+			}
+		})
+	}
 
 	window.onresize = function() {
 		renderer.resize()
