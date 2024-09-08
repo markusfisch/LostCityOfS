@@ -237,7 +237,10 @@ function Game(renderer) {
 		warp = (now - last) / 16
 		last = now
 
-		input()
+		const shaking = shakeUntil > now
+		if (!shaking) {
+			input()
+		}
 
 		// Animate view to player position.
 		const px = player.x, py = player.y,
@@ -253,7 +256,7 @@ function Game(renderer) {
 		let vx = -lookX * xscale,
 			vy = lookY * yscale,
 			r = 1, g = 1, b = 1
-		if (shakeUntil > now) {
+		if (shaking) {
 			const power = (shakeUntil - now) / shakeDuration,
 				shakePower = power * .05
 			vx += shakePattern[(now + 1) % shakeLength] * shakePower
