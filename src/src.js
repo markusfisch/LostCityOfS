@@ -2,7 +2,7 @@
 
 function Game(renderer) {
 	const pointersX = [], pointersY = [], keysDown = [],
-		map = [], mapRadius = 20, entities = [],
+		mapRadius = 20, map = [], entities = [], particles = [],
 		shakePattern = [.1, -.4, .7, -.3, .5, .2],
 		shakeLength = shakePattern.length,
 		shakeDuration = 300
@@ -130,7 +130,7 @@ function Game(renderer) {
 		return (random() - .5) * 2 * mapRadius
 	}
 
-	function outOfView(e) {
+	function offMap(e) {
 		return Math.abs(e.x) > mapRadius || Math.abs(e.y) > mapRadius
 	}
 
@@ -146,26 +146,28 @@ function Game(renderer) {
 		})
 	}
 
-	// Particles
-	for (let i = 0; i < 100; ++i) {
-		entities.push({
-			x: randomCoord(),
-			y: randomCoord(),
-			vx: .01 + random() * .01,
-			vy: .01 + random() * .01,
+	// Create particles.
+	for (let i = 0; i < 16; ++i) {
+		particles.push({
+			x: (random() - .5) * 2,
+			y: (random() - .5) * 2,
+			vx: .002 + random() * .002,
+			vy: .002 + random() * .002,
 			update: function() {
 				this.x += this.vx * warp
 				this.y += this.vy * warp
-				if (outOfView(this)) {
-					this.x = -this.x
-					this.y = -this.y
+				const rx = this.x + renderer.viewX,
+					ry = this.y - renderer.viewY
+				if (Math.abs(rx) > 1.1 || Math.abs(ry) > 1.1) {
+					this.x = -renderer.viewX + -rx
+					this.y = renderer.viewY + -ry
 				}
 				return 9
 			}
 		})
 	}
 
-	// Enemies
+	// Create enemies.
 	for (let i = 0; i < 10; ++i) {
 		const sprite = i % 2
 		entities.push({
@@ -183,7 +185,7 @@ function Game(renderer) {
 				}
 				this.x += this.vx * warp
 				this.y += this.vy * warp
-				if (outOfView(this)) {
+				if (offMap(this)) {
 					this.x = -this.x
 					this.y = -this.y
 				}
@@ -192,6 +194,7 @@ function Game(renderer) {
 		})
 	}
 
+	// Create player.
 	const player = {
 		x: lookX,
 		y: lookY,
@@ -267,6 +270,12 @@ function Game(renderer) {
 					e.x * xscale,
 					-e.y * yscale,
 					e.dx, e.dy)
+		}
+
+		// Push particles.
+		for (let i = particles.length; i-- > 0;) {
+			const e = particles[i]
+			renderer.push(e.update(), e.x, -e.y, e.dx, e.dy)
 		}
 
 		// Virtual touch stick.
