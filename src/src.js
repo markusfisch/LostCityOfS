@@ -2,8 +2,9 @@
 
 function Game(renderer) {
 	const pointersX = [], pointersY = [], keysDown = [],
-		map = [], entities = [], particles = [], blockables = [],
-		mapRadius = 20,
+		map = [], entities = [], particles = [],
+		blockables = [], dust = [],
+		mapRadius = 20, dustLife = 150,
 		shakePattern = [.1, -.4, .7, -.3, .5, .2],
 		shakeLength = shakePattern.length,
 		shakeDuration = 300
@@ -28,8 +29,20 @@ function Game(renderer) {
 		}, false)
 	}
 
+	function spawnDust(x, y) {
+		for (let i = dust.length; i--; ) {
+			const d = dust[i]
+			if (d.alive < now) {
+				d.alive = now + dustLife
+				d.x = x + (Math.random() - .5) / 2
+				d.y = y + Math.random() / 2
+				break
+			}
+		}
+	}
+
 	function moveBy(e, x, y) {
-		let nx = e.x + x,
+		const nx = e.x + x,
 			ny = e.y + y
 		for (let i = blockables.length; i--; ) {
 			const b = blockables[i]
@@ -41,7 +54,11 @@ function Game(renderer) {
 		e.x = nx
 		e.y = ny
 		e.dx = x < 0 ? -1 : 1
-		e.moving = Math.abs(x) + Math.abs(y) > 0
+		const moving = Math.abs(x) + Math.abs(y) > 0
+		e.moving = moving
+		if (moving) {
+			spawnDust(nx, ny)
+		}
 	}
 
 	function setPointer(event, down) {
@@ -208,6 +225,11 @@ function Game(renderer) {
 	}
 	entities.push(player)
 
+	// Create dust.
+	for (let i = 0; i < 16; ++i) {
+		dust.push({alive: 0})
+	}
+
 	// Create particles.
 	for (let i = 0; i < 16; ++i) {
 		particles.push({
@@ -285,6 +307,18 @@ function Game(renderer) {
 					e.x * xscale,
 					-e.y * yscale,
 					e.dx, e.dy)
+		}
+
+		// Push dust.
+		for (let i = dust.length; i--; ) {
+			const d = dust[i]
+			if (d.alive > now) {
+				const s = ((d.alive - now) / dustLife) * 2
+				renderer.push(9,
+					d.x * xscale,
+					-d.y * yscale,
+					s, s)
+			}
 		}
 
 		// Push entities.
