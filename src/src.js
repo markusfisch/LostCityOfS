@@ -2,8 +2,7 @@
 
 function Game(renderer) {
 	const pointersX = [], pointersY = [], keysDown = [],
-		mapCols = 32, mapRows = 32, map = [],
-		entities = [],
+		map = [], mapRadius = 20, entities = [],
 		shakePattern = [.1, -.4, .7, -.3, .5, .2],
 		shakeLength = shakePattern.length,
 		shakeDuration = 300
@@ -11,7 +10,7 @@ function Game(renderer) {
 	let seed = 1, pointers = 0,
 		stickX, stickY, stickDelta,
 		viewXMin, viewXMax, viewYMin, viewYMax,
-		lookX = mapCols >> 1, lookY = mapRows >> 1,
+		lookX = 0, lookY = 0,
 		shakeUntil = 0,
 		now, warp, last = Date.now()
 
@@ -28,31 +27,9 @@ function Game(renderer) {
 		}, false)
 	}
 
-	function sample(x, y) {
-		const l = Math.ceil(x - renderer.xscale),
-			r = Math.floor(x + renderer.xscale),
-			t = Math.round(y + renderer.yscale),
-			b = Math.ceil(y - renderer.yscale)
-		return map[t * mapCols + l] < 3 &&
-				map[t * mapCols + r] < 3 &&
-				map[b * mapCols + l] < 3 &&
-				map[b * mapCols + r] < 3
-	}
-
 	function moveBy(e, x, y) {
-		let nx = Math.min(mapCols - 1, Math.max(e.x + x, 0)),
-			ny = Math.min(mapRows - 1, Math.max(e.y + y, 0))
-		if (!sample(nx, ny)) {
-			if (sample(nx, e.y)) {
-				ny = e.y
-			} else if (sample(e.x, ny)) {
-				nx = e.x
-			} else {
-				return
-			}
-		}
-		e.x = nx
-		e.y = ny
+		e.x += x
+		e.y += y
 		e.dx = x < 0 ? -1 : 1
 		e.moving = Math.abs(x) + Math.abs(y) > 0
 	}
@@ -120,7 +97,7 @@ function Game(renderer) {
 	}
 
 	function input() {
-		const step = .05 * warp
+		const step = .07 * warp
 		let x = 0, y = 0
 		if (keysDown[37] || keysDown[72]) {
 			x = -step
@@ -134,9 +111,6 @@ function Game(renderer) {
 		if (keysDown[40] || keysDown[74]) {
 			y = step
 		}
-		if (keysDown[32]) {
-			shakeUntil = now + shakeDuration
-		}
 		if (pointers) {
 			const dx = stickX - pointersX[0],
 				dy = stickY - pointersY[0]
@@ -148,49 +122,55 @@ function Game(renderer) {
 	}
 
 	function random() {
-		// from http://indiegamr.com/generate-repeatable-random-numbers-in-js/
+		// http://indiegamr.com/generate-repeatable-random-numbers-in-js/
 		return (seed = (seed * 9301 + 49297) % 233280) / 233280
 	}
 
-	// Create map.
-	for (let y = 0, i = 0; y < mapRows; ++y) {
-		for (let x = 0; x < mapCols; ++x, ++i) {
-			map[i] = random() < .1 ? 8 : 1 + (x + y) % 2
-		}
+	function randomCoord() {
+		return (random() - .5) * 2 * mapRadius
 	}
 
-	// Create entities.
+	function outOfView(e) {
+		return Math.abs(e.x) > mapRadius || Math.abs(e.y) > mapRadius
+	}
+
+	// Map
+	for (let i = 0; i < 1000; ++i) {
+		const sprite = 1 + i % 2
+		map.push({
+			x: randomCoord(),
+			y: randomCoord(),
+			dx: 1 + random() * 2,
+			dy: 1 + random() * 2,
+			update: () => sprite
+		})
+	}
+
+	// Particles
 	for (let i = 0; i < 100; ++i) {
 		entities.push({
-			x: random() * mapCols,
-			y: random() * mapRows,
+			x: randomCoord(),
+			y: randomCoord(),
 			vx: .01 + random() * .01,
 			vy: .01 + random() * .01,
-			dx: 1,
-			dy: 1,
 			update: function() {
 				this.x += this.vx * warp
 				this.y += this.vy * warp
-				if (this.x > mapCols) {
-					this.x -= mapCols
-				} else if (this.x < 0) {
-					this.x += mapCols
-				}
-				if (this.y > mapRows) {
-					this.y -= mapRows
-				} else if (this.y < 0) {
-					this.y += mapRows
+				if (outOfView(this)) {
+					this.x = -this.x
+					this.y = -this.y
 				}
 				return 9
 			}
 		})
 	}
 
+	// Enemies
 	for (let i = 0; i < 10; ++i) {
 		const sprite = i % 2
 		entities.push({
-			x: random() * mapCols,
-			y: random() * mapRows,
+			x: randomCoord(),
+			y: randomCoord(),
 			vx: sprite ? .01 : 0,
 			vy: sprite ? 0 : .01,
 			dx: random() > .5 ? 1 : -1,
@@ -203,8 +183,10 @@ function Game(renderer) {
 				}
 				this.x += this.vx * warp
 				this.y += this.vy * warp
-				this.x %= mapCols
-				this.y %= mapRows
+				if (outOfView(this)) {
+					this.x = -this.x
+					this.y = -this.y
+				}
 				return 3 + sprite
 			}
 		})
@@ -213,10 +195,6 @@ function Game(renderer) {
 	const player = {
 		x: lookX,
 		y: lookY,
-		vx: 0,
-		vy: 0,
-		dx: 1,
-		dy: 1,
 		moving: false,
 		update: function() {
 			return 5 + (this.moving
@@ -228,34 +206,15 @@ function Game(renderer) {
 
 	window.onresize = function() {
 		renderer.resize()
-
-		const x2 = renderer.xscale / 2, y2 = renderer.yscale / 2
-		viewXMin = -1 + x2
-		viewXMax = -mapCols * renderer.xscale + 1 + x2
-		viewYMin = 1 - y2
-		viewYMax = mapRows * renderer.yscale - 1 - y2
 	}
 	window.onresize()
 
-	function pushMap(vx, vy) {
-		const l = Math.max(0, Math.floor((viewXMin - vx) / renderer.xscale)),
-			r = Math.min(mapCols, l + Math.ceil(2 / renderer.xscale) + 1),
-			t = Math.max(0, Math.floor((vy - viewYMin) / renderer.yscale)),
-			b = Math.min(mapRows, t + Math.ceil(2 / renderer.yscale) + 1),
-			skip = mapCols - (r - l)
-		for (let i = t * mapCols + l, y = t; y < b; ++y, i += skip) {
-			for (let x = l; x < r; ++x, ++i) {
-				renderer.pushScaled(map[i], x, -y)
-			}
-		}
+	function clamp(value, min, max) {
+		return Math.min(Math.max(value, min), max)
 	}
 
 	function compareY(a, b) {
 		return b.y - a.y
-	}
-
-	function clamp(value, min, max) {
-		return Math.min(Math.max(value, min), max)
 	}
 
 	function run() {
@@ -267,14 +226,19 @@ function Game(renderer) {
 
 		input()
 
+		// Animate view to player position.
 		const px = player.x, py = player.y,
 			dx = lookX - px, dy = lookY - py
 		if (dx*dx + dy*dy > .01) {
 			lookX = lookX * .9 + px * .1
 			lookY = lookY * .9 + py * .1
 		}
-		let vx = clamp(-lookX * renderer.xscale, viewXMax, viewXMin),
-			vy = clamp(lookY * renderer.yscale, viewYMin, viewYMax),
+
+		// Shake view.
+		const xscale = renderer.xscale,
+			yscale = renderer.yscale
+		let vx = -lookX * xscale,
+			vy = lookY * yscale,
 			r = 1, g = 1, b = 1
 		if (shakeUntil > now) {
 			const power = (shakeUntil - now) / shakeDuration,
@@ -286,12 +250,23 @@ function Game(renderer) {
 		renderer.viewX = vx
 		renderer.viewY = vy
 
-		pushMap(vx, vy)
+		// Push map.
+		for (let i = map.length; i-- > 0;) {
+			const e = map[i]
+			renderer.push(e.update(),
+					e.x * xscale,
+					-e.y * yscale,
+					e.dx, e.dy)
+		}
 
+		// Sort and push entities.
 		entities.sort(compareY)
 		for (let i = entities.length; i-- > 0;) {
 			const e = entities[i]
-			renderer.pushScaled(e.update(), e.x, -e.y, e.dx, e.dy, 1)
+			renderer.push(e.update(),
+					e.x * xscale,
+					-e.y * yscale,
+					e.dx, e.dy)
 		}
 
 		// Virtual touch stick.
@@ -369,7 +344,10 @@ function Renderer(atlas) {
 			t = atlas.coords[offset + 1] + nudge,
 			r = atlas.coords[offset + 6] - nudge,
 			b = atlas.coords[offset + 7] - nudge
+
+		// Unwrapped for speed.
 		let i = idx * elementsPerVertex
+
 		bufferData[i++] = x1
 		bufferData[i++] = y1
 		bufferData[i++] = l
@@ -403,12 +381,8 @@ function Renderer(atlas) {
 
 	let verts = 0, x2, y2
 	return {
-		width: 0,
-		height: 0,
 		xscale: 0,
 		yscale: 0,
-		viewX: 0,
-		viewY: 0,
 		resize: function() {
 			this.width = gl.canvas.clientWidth
 			this.height = gl.canvas.clientHeight
@@ -425,15 +399,16 @@ function Renderer(atlas) {
 
 			verts = 0
 		},
-		push: function(sprite, x, y, h, v, b) {
+		push: function(sprite, x, y, h, v) {
 			const fx = x + this.viewX, fy = y + this.viewY
-			if (fx < -1.2 || fy > 1.2 || fx > 1.2 || fy < -1.2) {
+			if (fx < -1.5 || fy > 1.5 || fx > 1.5 || fy < -1.5) {
+				// Skip out of view sprites.
 				return
 			}
 			const size = atlas.sizes[sprite], sy = size[1]
 			h = (h || 1) * size[0]
 			v = (v || 1) * sy
-			if (b) {
+			if (sy > 1) {
 				// Align taller sprites to the default base line
 				// so depth comparison works.
 				y += (sy - 1) * y2
@@ -452,9 +427,6 @@ function Renderer(atlas) {
 				x + x2 * h, y - y2 * v
 			)
 			verts += 6
-		},
-		pushScaled: function(sprite, x, y, h, v, b) {
-			this.push(sprite, x * this.xscale, y * this.yscale, h, v, b)
 		},
 		render: function(r, g, b) {
 			gl.uniform2f(camLoc, this.viewX, this.viewY)
