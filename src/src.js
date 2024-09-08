@@ -8,12 +8,12 @@ function Game(renderer) {
 		shakeLength = shakePattern.length,
 		shakeDuration = 300
 
-	let pointers = 0,
+	let seed = 1, pointers = 0,
 		stickX, stickY, stickDelta,
 		viewXMin, viewXMax, viewYMin, viewYMax,
 		lookX = mapCols >> 1, lookY = mapRows >> 1,
 		shakeUntil = 0,
-		now, warp, last = 0
+		now, warp, last = Date.now()
 
 	// Prevent pinch/zoom on iOS 11.
 	if ('ontouchstart' in document) {
@@ -28,9 +28,31 @@ function Game(renderer) {
 		}, false)
 	}
 
+	function sample(x, y) {
+		const l = Math.ceil(x - renderer.xscale),
+			r = Math.floor(x + renderer.xscale),
+			t = Math.round(y + renderer.yscale),
+			b = Math.ceil(y - renderer.yscale)
+		return map[t * mapCols + l] < 3 &&
+				map[t * mapCols + r] < 3 &&
+				map[b * mapCols + l] < 3 &&
+				map[b * mapCols + r] < 3
+	}
+
 	function moveBy(e, x, y) {
-		e.x = Math.min(mapCols - 1, Math.max(e.x + x, 0))
-		e.y = Math.min(mapRows - 1, Math.max(e.y + y, 0))
+		let nx = Math.min(mapCols - 1, Math.max(e.x + x, 0)),
+			ny = Math.min(mapRows - 1, Math.max(e.y + y, 0))
+		if (!sample(nx, ny)) {
+			if (sample(nx, e.y)) {
+				ny = e.y
+			} else if (sample(e.x, ny)) {
+				nx = e.x
+			} else {
+				return
+			}
+		}
+		e.x = nx
+		e.y = ny
 		e.dx = x < 0 ? -1 : 1
 		e.moving = Math.abs(x) + Math.abs(y) > 0
 	}
@@ -125,15 +147,53 @@ function Game(renderer) {
 		moveBy(player, x, y)
 	}
 
+	function random() {
+		// from http://indiegamr.com/generate-repeatable-random-numbers-in-js/
+		return (seed = (seed * 9301 + 49297) % 233280) / 233280
+	}
+
+	// Create map.
+	for (let y = 0, i = 0; y < mapRows; ++y) {
+		for (let x = 0; x < mapCols; ++x, ++i) {
+			map[i] = random() < .1 ? 8 : 1 + (x + y) % 2
+		}
+	}
+
 	// Create entities.
+	for (let i = 0; i < 100; ++i) {
+		entities.push({
+			x: random() * mapCols,
+			y: random() * mapRows,
+			vx: .01 + random() * .01,
+			vy: .01 + random() * .01,
+			dx: 1,
+			dy: 1,
+			update: function() {
+				this.x += this.vx * warp
+				this.y += this.vy * warp
+				if (this.x > mapCols) {
+					this.x -= mapCols
+				} else if (this.x < 0) {
+					this.x += mapCols
+				}
+				if (this.y > mapRows) {
+					this.y -= mapRows
+				} else if (this.y < 0) {
+					this.y += mapRows
+				}
+				return 9
+			}
+		})
+	}
+
 	for (let i = 0; i < 10; ++i) {
 		const sprite = i % 2
 		entities.push({
-			x: Math.random() * mapCols,
-			y: Math.random() * mapRows,
+			x: random() * mapCols,
+			y: random() * mapRows,
 			vx: sprite ? .01 : 0,
 			vy: sprite ? 0 : .01,
-			dx: Math.random() > .5 ? 1 : -1,
+			dx: random() > .5 ? 1 : -1,
 			dy: 1,
 			update: function() {
 				const dx = player.x - this.x,
@@ -149,6 +209,7 @@ function Game(renderer) {
 			}
 		})
 	}
+
 	const player = {
 		x: lookX,
 		y: lookY,
@@ -164,13 +225,6 @@ function Game(renderer) {
 		}
 	}
 	entities.push(player)
-
-	// Create map.
-	for (let y = 0, i = 0; y < mapRows; ++y) {
-		for (let x = 0; x < mapCols; ++x, ++i) {
-			map[i] = 1 + (x + y) % 2
-		}
-	}
 
 	window.onresize = function() {
 		renderer.resize()
