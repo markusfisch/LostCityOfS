@@ -42,8 +42,10 @@ function Game(renderer) {
 	}
 
 	function moveBy(e, x, y) {
-		const nx = e.x + x,
-			ny = e.y + y
+		if (!(e.moving = Math.abs(x) + Math.abs(y) > 0)) {
+			return
+		}
+		const nx = e.x + x, ny = e.y + y
 		for (let i = blockables.length; i--; ) {
 			const b = blockables[i]
 			if (Math.abs(b.x - nx) < .5 &&
@@ -54,11 +56,7 @@ function Game(renderer) {
 		e.x = nx
 		e.y = ny
 		e.dx = x < 0 ? -1 : 1
-		const moving = Math.abs(x) + Math.abs(y) > 0
-		e.moving = moving
-		if (moving) {
-			spawnDust(nx, ny)
-		}
+		spawnDust(nx, ny)
 	}
 
 	function setPointer(event, down) {
