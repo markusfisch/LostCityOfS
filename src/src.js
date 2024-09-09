@@ -4,10 +4,10 @@ function Game(renderer) {
 	const pointersX = [], pointersY = [], keysDown = [],
 		map = [], entities = [], particles = [],
 		blockables = [], dust = [],
-		mapRadius = 20, dustLife = 150,
 		shakePattern = [.1, -.4, .7, -.3, .5, .2],
 		shakeLength = shakePattern.length,
-		shakeDuration = 300
+		shakeDuration = 300,
+		dustLife = 150
 
 	let seed = 1, pointers = 0,
 		stickX, stickY, stickDelta,
@@ -155,10 +155,6 @@ function Game(renderer) {
 		return random() - .5
 	}
 
-	function offMap(e) {
-		return Math.abs(e.x) > mapRadius || Math.abs(e.y) > mapRadius
-	}
-
 	// Create map.
 	for (let i = 0, x = 0, y = 0; i < 1000; ++i) {
 		const sprite = 1 + i % 2
@@ -201,9 +197,8 @@ function Game(renderer) {
 				}
 				this.x += this.vx * warp
 				this.y += this.vy * warp
-				if (offMap(this)) {
-					this.x = -this.x
-					this.y = -this.y
+				if (Math.abs(this.x) > 4) {
+					this.vx = -this.vx
 				}
 				return 3 + sprite
 			}
