@@ -304,19 +304,19 @@ function Game(renderer) {
 
 		// Push dust.
 		for (let i = dust.length; i--; ) {
-			const d = dust[i]
-			if (d.alive > now) {
-				const s = (d.alive - now) / dustLife
+			const e = dust[i]
+			if (e.alive > now) {
+				const s = (e.alive - now) / dustLife
 				renderer.push(9,
-					d.x * xscale,
-					-d.y * yscale,
+					e.x * xscale,
+					-e.y * yscale,
 					s, s)
 			}
 		}
 
 		// Push entities.
 		entities.sort(compareY)
-		for (let i = entities.length; i-- > 0;) {
+		for (let i = entities.length; i--; ) {
 			const e = entities[i]
 			renderer.push(e.update(),
 					e.x * xscale,
@@ -325,8 +325,9 @@ function Game(renderer) {
 		}
 
 		// Push particles.
-		for (let i = particles.length; i-- > 0;) {
+		for (let i = particles.length; i--; ) {
 			const e = particles[i]
+			// Particles live in screen coordinates.
 			renderer.push(e.update(), e.x, -e.y, e.dx, e.dy)
 		}
 
