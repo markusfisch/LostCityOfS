@@ -2,7 +2,7 @@
 
 function Game(renderer) {
 	const pointersX = [], pointersY = [], keysDown = [],
-		map = [], entities = [], particles = [],
+		ground = [], entities = [], particles = [],
 		blockables = [], dust = [],
 		shakePattern = [.1, -.4, .7, -.3, .5, .2],
 		shakeLength = shakePattern.length,
@@ -155,10 +155,10 @@ function Game(renderer) {
 		return random() - .5
 	}
 
-	// Create map.
+	// Create ground.
 	for (let i = 0, x = 0, y = 0; i < 1000; ++i) {
 		const sprite = 1 + i % 2
-		map.push({
+		ground.push({
 			x: x,
 			y: y,
 			dx: 1 + random(),
@@ -293,9 +293,9 @@ function Game(renderer) {
 		renderer.viewX = vx
 		renderer.viewY = vy
 
-		// Push map.
-		for (let i = map.length; i-- > 0;) {
-			const e = map[i]
+		// Push ground.
+		for (let i = ground.length; i--; ) {
+			const e = ground[i]
 			renderer.push(e.update(),
 					e.x * xscale,
 					-e.y * yscale,
