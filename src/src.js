@@ -122,26 +122,26 @@ function Game(renderer) {
 	}
 
 	function input() {
-		const step = .07 * warp
+		const max = .05 * warp
 		let x = 0, y = 0
 		if (keysDown[37] || keysDown[72]) {
-			x = -step
+			x -= max
 		}
 		if (keysDown[39] || keysDown[76]) {
-			x = step
+			x += max
 		}
 		if (keysDown[38] || keysDown[75]) {
-			y = -step
+			y -= max
 		}
 		if (keysDown[40] || keysDown[74]) {
-			y = step
+			y += max
 		}
 		if (pointers) {
 			const dx = stickX - pointersX[0],
 				dy = stickY - pointersY[0]
 			stickDelta = dx*dx + dy*dy
-			x -= Math.max(-step, Math.min(dx * warp, step))
-			y += Math.max(-step, Math.min(dy * warp, step))
+			x = -Math.max(-max, Math.min(dx * warp, max))
+			y = Math.max(-max, Math.min(dy * warp, max))
 		}
 		moveBy(player, x, y)
 	}
