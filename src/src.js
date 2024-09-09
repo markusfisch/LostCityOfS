@@ -2,7 +2,7 @@
 
 function Game(renderer) {
 	const pointersX = [], pointersY = [], keysDown = [],
-		ground = [], entities = [], particles = [],
+		ground = [], entities = [], particles = [], clock = [],
 		blockables = [], dust = [],
 		shakePattern = [.1, -.4, .7, -.3, .5, .2],
 		shakeLength = shakePattern.length,
@@ -14,7 +14,8 @@ function Game(renderer) {
 		viewXMin, viewXMax, viewYMin, viewYMax,
 		lookX = 0, lookY = 0,
 		shakeUntil = 0,
-		now, warp, last = Date.now()
+		start = Date.now(), cursed = 0,
+		now, warp, last = start
 
 	// Prevent pinch/zoom on iOS 11.
 	if ('ontouchstart' in document) {
@@ -136,6 +137,10 @@ function Game(renderer) {
 		if (keysDown[40] || keysDown[74]) {
 			y += max
 		}
+		if (cursed && (x || y) && Math.random() < .5) {
+			x += (Math.random() - .5) * .5
+			y += (Math.random() - .5) * .5
+		}
 		if (pointers) {
 			const dx = stickX - pointersX[0],
 				dy = stickY - pointersY[0]
@@ -246,6 +251,21 @@ function Game(renderer) {
 
 	window.onresize = function() {
 		renderer.resize()
+
+		// Update clock geometry.
+		clock.length = 0
+		const aspect = renderer.width / renderer.height,
+			xr = .1, yr = xr * aspect,
+			cx = 1 - xr - xr / 2, cy = 1 - yr - yr / 2
+		for (let i = 13, a = Math.PI / 2, step = Math.PI * 2 / 13;
+				i--; a -= step) {
+			const x = cx + Math.cos(a) * xr,
+				y = cy + Math.sin(a) * yr
+			clock.push({
+				x: x,
+				y: y
+			})
+		}
 	}
 	window.onresize()
 
@@ -263,6 +283,10 @@ function Game(renderer) {
 		now = Date.now()
 		warp = (now - last) / 16
 		last = now
+
+		const elapsed = (now - start) / 1000,
+				elapsedMod13 = elapsed % 13
+		cursed = elapsed < 3 ? 0 : 1 - Math.min(elapsedMod13, 1) / 1
 
 		const shaking = shakeUntil > now
 		if (!shaking) {
@@ -329,6 +353,19 @@ function Game(renderer) {
 			const e = particles[i]
 			// Particles live in screen coordinates.
 			renderer.push(e.update(), e.x, -e.y, e.dx, e.dy)
+		}
+
+		if (cursed) {
+			const power = 1 + cursed
+			r *= power
+			g *= power
+			b *= power
+		}
+
+		// Push time.
+		for (let i = 0; i < elapsedMod13; ++i) {
+			const e = clock[i]
+			renderer.push(0, e.x - vx, e.y - vy, .1, .1)
 		}
 
 		// Virtual touch stick.
