@@ -306,7 +306,7 @@ function Game(renderer) {
 		for (let i = dust.length; i--; ) {
 			const d = dust[i]
 			if (d.alive > now) {
-				const s = ((d.alive - now) / dustLife) * 2
+				const s = (d.alive - now) / dustLife
 				renderer.push(9,
 					d.x * xscale,
 					-d.y * yscale,
