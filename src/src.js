@@ -47,13 +47,13 @@ function Game(renderer) {
 			return
 		}
 		const nx = e.x + x, ny = e.y + y
-		for (let i = blockables.length; i--; ) {
+		/*for (let i = blockables.length; i--; ) {
 			const b = blockables[i]
-			if (Math.abs(b.x - nx) < .5 &&
-					Math.abs(b.y - ny) < .5) {
+			if (Math.abs(b.x - nx) < .1 &&
+					Math.abs(b.y - ny) < .1) {
 				return
 			}
-		}
+		}*/
 		e.x = nx
 		e.y = ny
 		e.dx = x < 0 ? -1 : 1
@@ -161,24 +161,27 @@ function Game(renderer) {
 	}
 
 	// Create ground.
-	for (let i = 0, x = 0, y = 0; i < 1000; ++i) {
-		const sprite = 1 + i % 2
-		ground.push({
-			x: x,
-			y: y,
-			dx: 1 + random(),
-			update: () => sprite
-		})
-		x += cr()
-		--y
+	const groundWidth = 17, groundHeight = 31,
+			groundX = -8, groundY = 4
+	for (let y = 0; y < groundHeight; ++y) {
+		for (let x = 0; x < groundWidth; ++x) {
+			const sprite = 12 //random() < .2 ? 13 : 12
+			ground.push({
+				sprite: sprite,
+				x: groundX + x,
+				y: groundY + -y,
+				update: () => sprite
+			})
+		}
 	}
 
 	// Create blocking stuff.
 	for (let i = 0; i < 1000; ++i) {
 		const e = {
-			x: cr() * 30,
-			y: random() * -100,
-			update: () => 0
+			x: cr() * 16,
+			y: random() * -30 + 4,
+			dx: random() > .5 ? 1 : -1,
+			update: () => 11
 		}
 		blockables.push(e)
 		entities.push(e)
@@ -186,26 +189,30 @@ function Game(renderer) {
 
 	// Create enemies.
 	for (let i = 0, y = -2; i < 10; ++i, y -= 2) {
-		const sprite = i % 2,
-			vx = sprite ? .01 : -.01
+		const vx = i % 2 ? .01 : -.01
 		entities.push({
 			x: cr() * 3,
 			y: y,
 			vx: vx,
 			vy: 0,
-			dx: vx > 0 ? 1 : -1,
 			update: function() {
 				const dx = player.x - this.x,
 					dy = player.y - this.y
-				if (dx*dx + dy*dy < 1) {
+				if (dx*dx + dy*dy < .5) {
 					shakeUntil = now + shakeDuration
 				}
 				this.x += this.vx * warp
-				this.y += this.vy * warp
 				if (Math.abs(this.x) > 4) {
+					this.x = this.x > 0 ? 4 : -4
 					this.vx = -this.vx
 				}
-				return 3 + sprite
+				this.dx = vx > 0 ? 1 : -1
+				let frame = 8 + Math.round((now % 5000) / 100) % 5
+				if (frame >= 11) {
+					frame -= 2
+					this.dx = -this.dx
+				}
+				return frame
 			}
 		})
 	}
@@ -216,9 +223,10 @@ function Game(renderer) {
 		y: lookY,
 		moving: false,
 		update: function() {
-			return 5 + (this.moving
-					? Math.round((now % 300) / 100) % 3
-					: Math.round((now % 1000) / 500) % 2)
+			/*return 3 + (this.moving
+					? 1 + Math.round((now % 300) / 100) % 3
+					: Math.round((now % 1000) / 500) % 2)*/
+			return 3
 		}
 	}
 	entities.push(player)
@@ -244,7 +252,7 @@ function Game(renderer) {
 					this.x = -renderer.viewX + -rx
 					this.y = renderer.viewY + -ry
 				}
-				return 9
+				return 2
 			}
 		})
 	}
@@ -331,7 +339,7 @@ function Game(renderer) {
 			const e = dust[i]
 			if (e.alive > now) {
 				const s = (e.alive - now) / dustLife
-				renderer.push(9,
+				renderer.push(2,
 					e.x * xscale,
 					-e.y * yscale,
 					s, s)
@@ -356,7 +364,7 @@ function Game(renderer) {
 		}
 
 		if (cursed) {
-			const power = 1 + cursed
+			const power = 1 + cursed * .5
 			r *= power
 			g *= power
 			b *= power
@@ -365,7 +373,7 @@ function Game(renderer) {
 		// Push time.
 		for (let i = 0; i < elapsedMod13; ++i) {
 			const e = clock[i]
-			renderer.push(0, e.x - vx, e.y - vy, .1, .1)
+			renderer.push(1, e.x - vx, e.y - vy)
 		}
 
 		// Virtual touch stick.
@@ -428,6 +436,7 @@ function Renderer(atlas) {
 		moodLoc = gl.getUniformLocation(program, 'm'),
 		nudge = .5 / atlas.canvas.width
 
+	//gl.clearColor(.38, .952, .56, 1) // DEBUG
 	gl.clearColor(0, 0, 0, 1)
 
 	function setQuad(
