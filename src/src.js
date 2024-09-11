@@ -234,6 +234,16 @@ function Game(renderer) {
 	}
 
 	// Create stuff.
+	for (let i = map.length; i--; ) {
+		if (map[i] == 13) {
+			entities.push({
+				x: i % mapCols,
+				y: i / mapCols | 0,
+				dx: random() > .5 ? 1 : -1,
+				update: () => 16
+			})
+		}
+	}
 	for (let i = 0; i < 1000; ++i) {
 		const p = freeSpot(0, mapRows - 32, mapCols, 32)
 		entities.push({
