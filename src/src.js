@@ -80,8 +80,6 @@ function Game(renderer) {
 			y = Math.min(mapRows - 1, Math.max(e.y + dy * f, 0))
 		if (e === player &&
 				(blocks(x, y) || !canMoveTo(e, x, y))) {
-			e.tx = e.x
-			e.ty = e.y
 			return 1
 		}
 		e.x = x
