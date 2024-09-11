@@ -52,18 +52,34 @@ function Game(renderer) {
 		return map[offset(x, y)] == 13
 	}
 
-	function moveTo(e, tx, ty, step) {
+	function canMoveTo(e, x, y) {
+		x = Math.round(x)
+		y = Math.round(y)
+		const cell = nodes[offset(e.x, e.y)]
+		if (cell.x == x && cell.y == y) {
+			return 1
+		}
+		const neighbors = cell.neighbors
+		for (let i = neighbors.length; i--; ) {
+			const n = neighbors[i]
+			if (n.x == x && n.y == y) {
+				return 1
+			}
+		}
+		return 0
+	}
+
+	function moveTo(e, tx, ty, speed) {
 		const dx = tx - e.x,
 			dy = ty - e.y
 		if (!(e.moving = Math.abs(dx) + Math.abs(dy) > 0)) {
 			return
 		}
-		const f = Math.min(1, step * warp / Math.sqrt(dx*dx + dy*dy)),
+		const f = Math.min(1, speed * warp / Math.sqrt(dx*dx + dy*dy)),
 			x = Math.min(mapCols - 1, Math.max(e.x + dx * f, 0)),
-			y = Math.min(mapRows - 1, Math.max(e.y + dy * f, 0)),
-			mx = Math.round(x),
-			my = Math.round(y)
-		if (blocks(mx, my)) {
+			y = Math.min(mapRows - 1, Math.max(e.y + dy * f, 0))
+		if (e === player &&
+				(blocks(x, y) || !canMoveTo(e, x, y))) {
 			e.tx = e.x
 			e.ty = e.y
 			return 1
@@ -140,7 +156,7 @@ function Game(renderer) {
 	}
 
 	function input() {
-		const max = .1 * warp
+		const max = player.speed
 		let x = 0, y = 0
 		if (keysDown[37] || keysDown[72]) {
 			x -= max
@@ -271,13 +287,17 @@ function Game(renderer) {
 				for (; n.p; n = n.p) {
 					path.push(n.p)
 				}
-				const rev = path.reverse()
-				if (rev.length > 1) {
-					moveTo(e, rev[1].x, rev[1].y, .03)
+				let i = path.length - 2, tx, ty
+				if (i > -1) {
+					// Move to next tile on the way.
+					tx = path[i].x
+					ty = path[i].y
 				} else {
-					// Move within the same map tile.
-					moveTo(e, target.x, target.y, .03)
+					// Move within the same tile.
+					tx = target.x
+					ty = target.y
 				}
+				moveTo(e, tx, ty, e.speed)
 				return 1
 			}
 
@@ -319,7 +339,7 @@ function Game(renderer) {
 		if (d < .3) {
 			shakeUntil = now + shakeDuration
 			return
-		} else if (d < 10 && findPath(e, prey)) {
+		} else if (d < 20 && findPath(e, prey)) {
 			return
 		}
 		if (!findPath(e, e.waypoint) ||
@@ -330,11 +350,12 @@ function Game(renderer) {
 	}
 
 	// Create enemies.
-	for (let i = 0, y = -8; i < 10; ++i, y -= 2) {
+	for (let i = 0, y = -9; i < 10; ++i, y -= 2) {
 		const p = freeSpot(0, mapRows + y, mapCols, 1),
 				e = {
 			x: p.x,
 			y: p.y,
+			speed: .03,
 			update: function() {
 				hunt(this, player)
 				let frame = 8 + Math.round((now % 5000) / 100) % 5
@@ -356,6 +377,7 @@ function Game(renderer) {
 	const player = {
 		x: lookX,
 		y: lookY,
+		speed: .05,
 		moving: false,
 		update: function() {
 			/*return 3 + (this.moving
