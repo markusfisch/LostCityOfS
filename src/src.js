@@ -408,7 +408,7 @@ function Game(renderer) {
 		clock.length = 0
 		const aspect = renderer.width / renderer.height,
 			xr = .1, yr = xr * aspect,
-			cx = 1 - xr - xr / 2, cy = 1 - yr - yr / 2
+			cx = -1 + xr + xr / 2, cy = 1 - yr - yr / 2
 		for (let i = 13, a = Math.PI / 2, step = Math.PI * 2 / 13;
 				i--; a -= step) {
 			const x = cx + Math.cos(a) * xr,
