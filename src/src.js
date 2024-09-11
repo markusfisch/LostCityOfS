@@ -4,7 +4,7 @@ function Game(renderer) {
 	const pointersX = [], pointersY = [], keysDown = [],
 		mapCols = 16, mapRows = 128, map = [], nodes = [],
 		mapCenterX = mapCols >> 1, mapCenterY = mapRows >> 1,
-		entities = [], excludes = [], particles = [], clock = [],
+		entities = [], particles = [], clock = [],
 		blockables = [], dust = [],
 		shakePattern = [.1, -.4, .7, -.3, .5, .2],
 		shakeLength = shakePattern.length,
@@ -63,14 +63,6 @@ function Game(renderer) {
 			y = Math.min(mapRows - 1, Math.max(e.y + dy * f, 0)),
 			mx = Math.round(x),
 			my = Math.round(y)
-		/*for (let i = excludes.length; i--; ) {
-			const o = excludes[i]
-			if (o !== e &&
-					Math.abs(x - o.x) < .1 &&
-					Math.abs(y - o.y) < .1) {
-				return 0
-			}
-		}*/
 		if (blocks(mx, my)) {
 			e.tx = e.x
 			e.ty = e.y
@@ -338,7 +330,7 @@ function Game(renderer) {
 	}
 
 	// Create enemies.
-	for (let i = 0, y = -6; i < 10; ++i, y -= 2) {
+	for (let i = 0, y = -8; i < 10; ++i, y -= 2) {
 		const p = freeSpot(0, mapRows + y, mapCols, 1),
 				e = {
 			x: p.x,
@@ -358,7 +350,6 @@ function Game(renderer) {
 		}
 		e.nextWaypoint()
 		entities.push(e)
-		excludes.push(e)
 	}
 
 	// Create player.
