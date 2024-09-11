@@ -2,7 +2,7 @@
 
 function Game(renderer) {
 	const pointersX = [], pointersY = [], keysDown = [],
-		mapCols = 16, mapRows = 128, map = [],
+		mapCols = 16, mapRows = 128, map = [], nodes = [],
 		mapCenterX = mapCols >> 1, mapCenterY = mapRows >> 1,
 		entities = [], particles = [], clock = [],
 		blockables = [], dust = [],
@@ -44,28 +44,37 @@ function Game(renderer) {
 		}
 	}
 
-	function moveBy(e, x, y) {
-		if (!(e.moving = Math.abs(x) + Math.abs(y) > 0)) {
+	function offset(x, y) {
+		return Math.round(y) * mapCols + Math.round(x)
+	}
+
+	function blocks(x, y) {
+		return map[offset(x, y)] == 13
+	}
+
+	function moveTo(e, tx, ty, step) {
+		const dx = tx - e.x,
+			dy = ty - e.y
+		if (!(e.moving = Math.abs(dx) + Math.abs(dy) > 0)) {
 			return
 		}
-		const nx = Math.min(mapCols - 1, Math.max(e.x + x, 0)),
-			ny = Math.min(mapRows - 1, Math.max(e.y + y, 0)),
-			mx = Math.round(nx),
-			my = Math.ceil(ny)
-		/*for (let i = blockables.length; i--; ) {
-			const b = blockables[i]
-			if (Math.abs(b.x - nx) < .1 &&
-					Math.abs(b.y - ny) < .1) {
-				return
-			}
-		}*/
-		if (map[my * mapCols + mx] == 13) {
-			return
+		const f = Math.min(1, step * warp / Math.sqrt(dx*dx + dy*dy)),
+			x = Math.min(mapCols - 1, Math.max(e.x + dx * f, 0)),
+			y = Math.min(mapRows - 1, Math.max(e.y + dy * f, 0)),
+			mx = Math.round(x),
+			my = Math.round(y) //Math.ceil(y)
+		if (blocks(mx, my)) {
+			e.tx = e.x
+			e.ty = e.y
+			return 1
 		}
-		e.x = nx
-		e.y = ny
-		e.dx = x < 0 ? -1 : 1
-		spawnDust(nx, ny)
+		e.x = x
+		e.y = y
+		e.dx = dx < 0 ? -1 : 1
+		if (now % 100 > 50) {
+			spawnDust(x, y)
+		}
+		return f == 1
 	}
 
 	function setPointer(event, down) {
@@ -131,7 +140,7 @@ function Game(renderer) {
 	}
 
 	function input() {
-		const max = .05 * warp
+		const max = .1 * warp
 		let x = 0, y = 0
 		if (keysDown[37] || keysDown[72]) {
 			x -= max
@@ -156,7 +165,9 @@ function Game(renderer) {
 			x = -Math.max(-max, Math.min(dx * warp, max))
 			y = Math.max(-max, Math.min(dy * warp, max))
 		}
-		moveBy(player, x, y)
+		player.tx = player.x + x
+		player.ty = player.y + y
+		moveTo(player, player.tx, player.ty, max)
 	}
 
 	function random() {
@@ -171,63 +182,171 @@ function Game(renderer) {
 	// Create map.
 	for (let y = 0, i = 0; y < mapRows; ++y) {
 		for (let x = 0; x < mapCols; ++x, ++i) {
-			//const sprite = random() < .2 ? 13 : 12
-			map[i] = 12 //sprite
+			const sprite = random() < .2 ? 13 : 12
+			map[i] = sprite
+			nodes[i] = {
+				x: x,
+				y: y
+			}
+		}
+	}
+	for (let i = 0, y = 0; y < mapRows; ++y) {
+		for (let x = 0; x < mapCols; ++x, ++i) {
+			const neighbors = []
+			if (x > 0) {
+				neighbors.push(nodes[offset(x - 1, y)])
+			}
+			if (x < mapCols - 1) {
+				neighbors.push(nodes[offset(x + 1, y)])
+			}
+			if (y > 0) {
+				neighbors.push(nodes[offset(x, y - 1)])
+			}
+			if (y < mapRows - 1) {
+				neighbors.push(nodes[offset(x, y + 1)])
+			}
+			nodes[i].neighbors = neighbors
 		}
 	}
 
-	// Create map.
+	function newPos(l, t, w, h) {
+		let x, y
+		do {
+			x = l + random() * w - .5
+			y = t + random() * h - .5
+		} while (blocks(x, y))
+		return {
+			x: x,
+			y: y
+		}
+	}
+
+	// Create stuff.
 	for (let i = 0; i < 1000; ++i) {
+		const p = newPos(0, mapRows - 32, mapCols, 32)
 		entities.push({
-			x: mapCenterX + cr() * mapCols,
-			y: (mapRows - 32) + random() * 32,
+			x: p.x,
+			y: p.y,
 			dx: random() > .5 ? 1 : -1,
 			update: () => 11
 		})
 	}
-	for (let i = 0; i < 100; ++i) {
+	for (let i = 0; i < 200; ++i) {
+		const sprite = i % 2 == 0 ? 14 : 15,
+			p = newPos(0, 0, mapCols, mapRows)
 		entities.push({
-			x: mapCenterX + cr() * mapCols,
-			y: mapCenterY + cr() * mapRows,
+			x: p.x,
+			y: p.y,
 			dx: random() > .5 ? 1 : -1,
-			update: () => 14
-		})
-	}
-	for (let i = 0; i < 100; ++i) {
-		entities.push({
-			x: mapCenterX + cr() * mapCols,
-			y: mapCenterY + cr() * mapRows,
-			dx: random() > .5 ? 1 : -1,
-			update: () => 15
+			update: () => sprite
 		})
 	}
 
+	function dist(a, b) {
+		return Math.abs(Math.round(a.x - b.x)) + Math.abs(Math.round(a.y - b.y))
+	}
+
+	function findPath(e, target) {
+		for (let i = mapCols * mapRows; i-- > 0; ) {
+			const n = nodes[i]
+			n.p = null
+			n.g = n.f = n.h = 0
+		}
+		const start = nodes[offset(Math.round(e.x), Math.round(e.y))],
+			goal = nodes[offset(Math.round(target.x), Math.round(target.y))],
+			openSet = [start],
+			closedSet = []
+		start.h = dist(e, target)
+		while (openSet.length > 0) {
+			let low = 0
+			for (let i = 0, l = openSet.length; i < l; ++i) {
+				if (openSet[i].f < openSet[low].f) {
+					low = i
+				}
+			}
+
+			const current = openSet[low]
+			if (current === goal) {
+				const path = []
+				let n = current
+				path.push(n)
+				for (; n.p; n = n.p) {
+					path.push(n.p)
+				}
+				const rev = path.reverse()
+				if (rev.length > 1) {
+					moveTo(e, rev[1].x, rev[1].y, .03)
+				}
+				return
+			}
+
+			openSet.splice(low, 1)
+			closedSet.push(current)
+
+			const neighbors = current.neighbors
+			for (let i = 0, l = neighbors.length; i < l; ++i) {
+				const neighbor = neighbors[i]
+				if (!closedSet.includes(neighbor) &&
+						!blocks(neighbor.x, neighbor.y)) {
+					const tg = current.g + 1
+					let newPath = false
+					if (openSet.includes(neighbor)) {
+						if (tg < neighbor.g) {
+							neighbor.g = tg
+							newPath = true
+						}
+					} else {
+						neighbor.g = tg
+						newPath = true
+						openSet.push(neighbor)
+					}
+					if (newPath) {
+						neighbor.h = dist(neighbor, goal)
+						neighbor.f = neighbor.g + neighbor.h
+						neighbor.p = current
+					}
+				}
+			}
+		}
+	}
+
+	function hunt(e, prey) {
+		const dx = prey.x - e.x,
+			dy = prey.y - e.y,
+			d = dx*dx + dy*dy
+		if (d < 1) {
+			shakeUntil = now + shakeDuration
+			return
+		} else if (d < 80) {
+			findPath(e, prey)
+		} else if (moveTo(e, e.tx, e.ty, .02)) {
+			e.waypoint()
+		}
+	}
+
 	// Create enemies.
-	for (let i = 0, y = -6; i < 10; ++i, y -= 2) {
-		const vx = i % 2 ? .01 : -.01
+	for (let i = 0, y = -6; i < 2; ++i, y -= 2) {
+		const vx = i % 2 ? .01 : -.01,
+			p = newPos(0, mapRows + y, mapCols, 1)
 		entities.push({
-			x: mapCenterX + cr() * 3,
-			y: mapRows + y,
+			x: p.x,
+			y: p.y,
+			tx: 0, ty: 0,
 			vx: vx,
 			vy: 0,
+			stuck: 0,
 			update: function() {
-				const dx = player.x - this.x,
-					dy = player.y - this.y
-				if (dx*dx + dy*dy < .5) {
-					shakeUntil = now + shakeDuration
-				}
-				this.x += this.vx * warp
-				if (Math.abs(this.x - mapCenterX) > 4) {
-					this.x = mapCenterX + (this.x > mapCenterX ? 4 : -4)
-					this.vx = -this.vx
-				}
-				this.dx = vx > 0 ? 1 : -1
+				hunt(this, player)
 				let frame = 8 + Math.round((now % 5000) / 100) % 5
 				if (frame >= 11) {
 					frame -= 2
 					this.dx = -this.dx
 				}
 				return frame
+			},
+			waypoint: function() {
+				this.tx = mapCenterX + cr() * 3
+				this.ty = mapRows + y
 			}
 		})
 	}
@@ -247,7 +366,7 @@ function Game(renderer) {
 	entities.push(player)
 
 	// Create dust.
-	for (let i = 0; i < 16; ++i) {
+	for (let i = 0; i < 32; ++i) {
 		dust.push({alive: 0})
 	}
 
@@ -321,10 +440,7 @@ function Game(renderer) {
 				elapsedMod13 = elapsed % 13
 		cursed = elapsed < 3 ? 0 : 1 - Math.min(elapsedMod13, 1) / 1
 
-		const shaking = shakeUntil > now
-		if (!shaking) {
-			input()
-		}
+		input()
 
 		// Animate view to player position.
 		const px = player.x, py = player.y,
@@ -340,7 +456,7 @@ function Game(renderer) {
 		let vx = clamp(-lookX * xscale, viewXMax, viewXMin),
 			vy = clamp(lookY * yscale, viewYMin, viewYMax),
 			r = 1, g = 1, b = 1
-		if (shaking) {
+		if (shakeUntil > now) {
 			const power = (shakeUntil - now) / shakeDuration,
 				shakePower = power * .05
 			vx += shakePattern[(now + 1) % shakeLength] * shakePower
@@ -368,11 +484,7 @@ function Game(renderer) {
 		for (let i = dust.length; i--; ) {
 			const e = dust[i]
 			if (e.alive > now) {
-				const s = (e.alive - now) / dustLife
-				renderer.push(2,
-					e.x * xscale,
-					-e.y * yscale,
-					s, s)
+				renderer.push(2, e.x * xscale, -e.y * yscale)
 			}
 		}
 
@@ -465,7 +577,6 @@ function Renderer(atlas) {
 		moodLoc = gl.getUniformLocation(program, 'm'),
 		nudge = .5 / atlas.canvas.width
 
-	//gl.clearColor(.38, .952, .56, 1) // DEBUG
 	gl.clearColor(0, 0, 0, 1)
 
 	function setQuad(
