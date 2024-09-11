@@ -2,7 +2,9 @@
 
 function Game(renderer) {
 	const pointersX = [], pointersY = [], keysDown = [],
-		ground = [], entities = [], particles = [], clock = [],
+		mapCols = 16, mapRows = 128, map = [],
+		mapCenterX = mapCols >> 1, mapCenterY = mapRows >> 1,
+		entities = [], particles = [], clock = [],
 		blockables = [], dust = [],
 		shakePattern = [.1, -.4, .7, -.3, .5, .2],
 		shakeLength = shakePattern.length,
@@ -12,7 +14,7 @@ function Game(renderer) {
 	let seed = 1, pointers = 0,
 		stickX, stickY, stickDelta,
 		viewXMin, viewXMax, viewYMin, viewYMax,
-		lookX = 0, lookY = 0,
+		lookX = mapCols >> 1, lookY = mapRows - 4,
 		shakeUntil = 0,
 		start = Date.now(), cursed = 0,
 		now, warp, last = start
@@ -46,7 +48,10 @@ function Game(renderer) {
 		if (!(e.moving = Math.abs(x) + Math.abs(y) > 0)) {
 			return
 		}
-		const nx = e.x + x, ny = e.y + y
+		const nx = Math.min(mapCols - 1, Math.max(e.x + x, 0)),
+			ny = Math.min(mapRows - 1, Math.max(e.y + y, 0)),
+			mx = Math.round(nx),
+			my = Math.ceil(ny)
 		/*for (let i = blockables.length; i--; ) {
 			const b = blockables[i]
 			if (Math.abs(b.x - nx) < .1 &&
@@ -54,6 +59,9 @@ function Game(renderer) {
 				return
 			}
 		}*/
+		if (map[my * mapCols + mx] == 13) {
+			return
+		}
 		e.x = nx
 		e.y = ny
 		e.dx = x < 0 ? -1 : 1
@@ -160,39 +168,46 @@ function Game(renderer) {
 		return random() - .5
 	}
 
-	// Create ground.
-	const groundWidth = 17, groundHeight = 31,
-			groundX = -8, groundY = 4
-	for (let y = 0; y < groundHeight; ++y) {
-		for (let x = 0; x < groundWidth; ++x) {
-			const sprite = 12 //random() < .2 ? 13 : 12
-			ground.push({
-				sprite: sprite,
-				x: groundX + x,
-				y: groundY + -y,
-				update: () => sprite
-			})
+	// Create map.
+	for (let y = 0, i = 0; y < mapRows; ++y) {
+		for (let x = 0; x < mapCols; ++x, ++i) {
+			//const sprite = random() < .2 ? 13 : 12
+			map[i] = 12 //sprite
 		}
 	}
 
-	// Create blocking stuff.
+	// Create map.
 	for (let i = 0; i < 1000; ++i) {
-		const e = {
-			x: cr() * 16,
-			y: random() * -30 + 4,
+		entities.push({
+			x: mapCenterX + cr() * mapCols,
+			y: (mapRows - 32) + random() * 32,
 			dx: random() > .5 ? 1 : -1,
 			update: () => 11
-		}
-		blockables.push(e)
-		entities.push(e)
+		})
+	}
+	for (let i = 0; i < 100; ++i) {
+		entities.push({
+			x: mapCenterX + cr() * mapCols,
+			y: mapCenterY + cr() * mapRows,
+			dx: random() > .5 ? 1 : -1,
+			update: () => 14
+		})
+	}
+	for (let i = 0; i < 100; ++i) {
+		entities.push({
+			x: mapCenterX + cr() * mapCols,
+			y: mapCenterY + cr() * mapRows,
+			dx: random() > .5 ? 1 : -1,
+			update: () => 15
+		})
 	}
 
 	// Create enemies.
-	for (let i = 0, y = -2; i < 10; ++i, y -= 2) {
+	for (let i = 0, y = -6; i < 10; ++i, y -= 2) {
 		const vx = i % 2 ? .01 : -.01
 		entities.push({
-			x: cr() * 3,
-			y: y,
+			x: mapCenterX + cr() * 3,
+			y: mapRows + y,
 			vx: vx,
 			vy: 0,
 			update: function() {
@@ -202,8 +217,8 @@ function Game(renderer) {
 					shakeUntil = now + shakeDuration
 				}
 				this.x += this.vx * warp
-				if (Math.abs(this.x) > 4) {
-					this.x = this.x > 0 ? 4 : -4
+				if (Math.abs(this.x - mapCenterX) > 4) {
+					this.x = mapCenterX + (this.x > mapCenterX ? 4 : -4)
 					this.vx = -this.vx
 				}
 				this.dx = vx > 0 ? 1 : -1
@@ -239,18 +254,22 @@ function Game(renderer) {
 	// Create particles.
 	for (let i = 0; i < 16; ++i) {
 		particles.push({
-			x: cr() * 2,
-			y: cr() * 2,
-			vx: .002 + random() * .002,
-			vy: .002 + random() * .002,
+			vx: .002 + Math.random() * .002,
+			vy: .002 + Math.random() * .002,
 			update: function() {
+				if (this.x === undefined) {
+					this.x = -renderer.viewX + (Math.random() - .5) * 2
+					this.y = renderer.viewY + (Math.random() - .5) * 2
+				}
 				this.x += this.vx * warp
 				this.y += this.vy * warp
 				const rx = this.x + renderer.viewX,
 					ry = this.y - renderer.viewY
-				if (Math.abs(rx) > 1.1 || Math.abs(ry) > 1.1) {
-					this.x = -renderer.viewX + -rx
-					this.y = renderer.viewY + -ry
+				if (Math.abs(rx) > 1.1) {
+					this.x = -renderer.viewX - 1.1
+				}
+				if (Math.abs(ry) > 1.1) {
+					this.y = renderer.viewY - 1.1
 				}
 				return 2
 			}
@@ -259,6 +278,12 @@ function Game(renderer) {
 
 	window.onresize = function() {
 		renderer.resize()
+
+		const x2 = renderer.xscale / 2, y2 = renderer.yscale / 2
+		viewXMin = -1 + x2
+		viewXMax = -mapCols * renderer.xscale + 1 + x2
+		viewYMin = 1 - y2
+		viewYMax = mapRows * renderer.yscale - 1 - y2
 
 		// Update clock geometry.
 		clock.length = 0
@@ -289,7 +314,7 @@ function Game(renderer) {
 		requestAnimationFrame(run)
 
 		now = Date.now()
-		warp = (now - last) / 16
+		warp = Math.min(2, (now - last) / 16)
 		last = now
 
 		const elapsed = (now - start) / 1000,
@@ -312,8 +337,8 @@ function Game(renderer) {
 		// Shake view.
 		const xscale = renderer.xscale,
 			yscale = renderer.yscale
-		let vx = -lookX * xscale,
-			vy = lookY * yscale,
+		let vx = clamp(-lookX * xscale, viewXMax, viewXMin),
+			vy = clamp(lookY * yscale, viewYMin, viewYMax),
 			r = 1, g = 1, b = 1
 		if (shaking) {
 			const power = (shakeUntil - now) / shakeDuration,
@@ -325,13 +350,18 @@ function Game(renderer) {
 		renderer.viewX = vx
 		renderer.viewY = vy
 
-		// Push ground.
-		for (let i = ground.length; i--; ) {
-			const e = ground[i]
-			renderer.push(e.update(),
-					e.x * xscale,
-					-e.y * yscale,
-					e.dx, e.dy)
+		// Push Map.
+		{
+			const l = Math.max(0, Math.floor((viewXMin - vx) / xscale)),
+				r = Math.min(mapCols, l + Math.ceil(2 / xscale) + 1),
+				t = Math.max(0, Math.floor((vy - viewYMin) / yscale)),
+				b = Math.min(mapRows, t + Math.ceil(2 / yscale) + 1),
+				skip = mapCols - (r - l)
+			for (let i = t * mapCols + l, y = t; y < b; ++y, i += skip) {
+				for (let x = l; x < r; ++x, ++i) {
+					renderer.push(map[i], x * xscale, -y * yscale)
+				}
+			}
 		}
 
 		// Push dust.
@@ -359,8 +389,7 @@ function Game(renderer) {
 		// Push particles.
 		for (let i = particles.length; i--; ) {
 			const e = particles[i]
-			// Particles live in screen coordinates.
-			renderer.push(e.update(), e.x, -e.y, e.dx, e.dy)
+			renderer.push(e.update(), e.x, -e.y)
 		}
 
 		if (cursed) {
