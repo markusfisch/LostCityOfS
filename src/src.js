@@ -170,9 +170,9 @@ function Game(renderer) {
 		if (keysDown[40] || keysDown[74]) {
 			y += max
 		}
-		if (cursed && (x || y) && Math.random() < .5) {
-			x += (Math.random() - .5) * .5
-			y += (Math.random() - .5) * .5
+		if (cursed && (x || y)) {
+			x = -x
+			y = -y
 		}
 		if (pointers) {
 			const dx = stickX - pointersX[0],
