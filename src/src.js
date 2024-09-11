@@ -238,7 +238,7 @@ function Game(renderer) {
 		if (map[i] == 13) {
 			entities.push({
 				x: i % mapCols,
-				y: i / mapCols | 0,
+				y: (i / mapCols | 0) + .5,
 				dx: random() > .5 ? 1 : -1,
 				update: () => 16
 			})
@@ -526,7 +526,8 @@ function Game(renderer) {
 			renderer.push(e.update(),
 					e.x * xscale,
 					-e.y * yscale,
-					e.dx, e.dy)
+					e.dx, e.dy,
+					1)
 		}
 
 		// Push particles.
@@ -678,19 +679,17 @@ function Renderer(atlas) {
 
 			verts = 0
 		},
-		push: function(sprite, x, y, h, v) {
+		push: function(sprite, x, y, h, v, ground) {
 			const fx = x + this.viewX, fy = y + this.viewY
-			if (fx < -1.5 || fy > 1.5 || fx > 1.5 || fy < -1.5) {
+			if (fx < -2 || fy > 2 || fx > 2 || fy < -2) {
 				// Skip out of view sprites.
 				return
 			}
 			const size = atlas.sizes[sprite], sy = size[1]
 			h = (h || 1) * size[0]
 			v = (v || 1) * sy
-			if (sy > 1) {
-				// Align taller sprites to the default base line
-				// so depth comparison works.
-				y += (sy - 1) * y2
+			if (ground) {
+				y += sy * y2
 			}
 			setQuad(
 				verts,
