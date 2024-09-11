@@ -4,7 +4,7 @@ function Game(renderer) {
 	const pointersX = [], pointersY = [], keysDown = [],
 		mapCols = 16, mapRows = 128, map = [], nodes = [],
 		mapCenterX = mapCols >> 1, mapCenterY = mapRows >> 1,
-		entities = [], particles = [], clock = [],
+		entities = [], excludes = [], particles = [], clock = [],
 		blockables = [], dust = [],
 		shakePattern = [.1, -.4, .7, -.3, .5, .2],
 		shakeLength = shakePattern.length,
@@ -62,7 +62,15 @@ function Game(renderer) {
 			x = Math.min(mapCols - 1, Math.max(e.x + dx * f, 0)),
 			y = Math.min(mapRows - 1, Math.max(e.y + dy * f, 0)),
 			mx = Math.round(x),
-			my = Math.round(y) //Math.ceil(y)
+			my = Math.round(y)
+		/*for (let i = excludes.length; i--; ) {
+			const o = excludes[i]
+			if (o !== e &&
+					Math.abs(x - o.x) < .1 &&
+					Math.abs(y - o.y) < .1) {
+				return 0
+			}
+		}*/
 		if (blocks(mx, my)) {
 			e.tx = e.x
 			e.ty = e.y
@@ -165,9 +173,7 @@ function Game(renderer) {
 			x = -Math.max(-max, Math.min(dx * warp, max))
 			y = Math.max(-max, Math.min(dy * warp, max))
 		}
-		player.tx = player.x + x
-		player.ty = player.y + y
-		moveTo(player, player.tx, player.ty, max)
+		moveTo(player, player.x + x, player.y + y, max)
 	}
 
 	function random() {
@@ -209,7 +215,7 @@ function Game(renderer) {
 		}
 	}
 
-	function newPos(l, t, w, h) {
+	function freeSpot(l, t, w, h) {
 		let x, y
 		do {
 			x = l + random() * w - .5
@@ -223,7 +229,7 @@ function Game(renderer) {
 
 	// Create stuff.
 	for (let i = 0; i < 1000; ++i) {
-		const p = newPos(0, mapRows - 32, mapCols, 32)
+		const p = freeSpot(0, mapRows - 32, mapCols, 32)
 		entities.push({
 			x: p.x,
 			y: p.y,
@@ -233,7 +239,7 @@ function Game(renderer) {
 	}
 	for (let i = 0; i < 200; ++i) {
 		const sprite = i % 2 == 0 ? 14 : 15,
-			p = newPos(0, 0, mapCols, mapRows)
+			p = freeSpot(0, 0, mapCols, mapRows)
 		entities.push({
 			x: p.x,
 			y: p.y,
@@ -252,8 +258,8 @@ function Game(renderer) {
 			n.p = null
 			n.g = n.f = n.h = 0
 		}
-		const start = nodes[offset(Math.round(e.x), Math.round(e.y))],
-			goal = nodes[offset(Math.round(target.x), Math.round(target.y))],
+		const start = nodes[offset(e.x, e.y)],
+			goal = nodes[offset(target.x, target.y)],
 			openSet = [start],
 			closedSet = []
 		start.h = dist(e, target)
@@ -276,8 +282,11 @@ function Game(renderer) {
 				const rev = path.reverse()
 				if (rev.length > 1) {
 					moveTo(e, rev[1].x, rev[1].y, .03)
+				} else {
+					// Move within the same map tile.
+					moveTo(e, target.x, target.y, .03)
 				}
-				return
+				return 1
 			}
 
 			openSet.splice(low, 1)
@@ -308,33 +317,32 @@ function Game(renderer) {
 				}
 			}
 		}
+		return 0
 	}
 
 	function hunt(e, prey) {
 		const dx = prey.x - e.x,
 			dy = prey.y - e.y,
 			d = dx*dx + dy*dy
-		if (d < 1) {
+		if (d < .3) {
 			shakeUntil = now + shakeDuration
 			return
-		} else if (d < 80) {
-			findPath(e, prey)
-		} else if (moveTo(e, e.tx, e.ty, .02)) {
-			e.waypoint()
+		} else if (d < 10 && findPath(e, prey)) {
+			return
+		}
+		if (!findPath(e, e.waypoint) ||
+				(Math.round(e.x) == Math.round(e.waypoint.x) &&
+				Math.round(e.y) == Math.round(e.waypoint.y))) {
+			e.nextWaypoint()
 		}
 	}
 
 	// Create enemies.
-	for (let i = 0, y = -6; i < 2; ++i, y -= 2) {
-		const vx = i % 2 ? .01 : -.01,
-			p = newPos(0, mapRows + y, mapCols, 1)
-		entities.push({
+	for (let i = 0, y = -6; i < 10; ++i, y -= 2) {
+		const p = freeSpot(0, mapRows + y, mapCols, 1),
+				e = {
 			x: p.x,
 			y: p.y,
-			tx: 0, ty: 0,
-			vx: vx,
-			vy: 0,
-			stuck: 0,
 			update: function() {
 				hunt(this, player)
 				let frame = 8 + Math.round((now % 5000) / 100) % 5
@@ -344,11 +352,13 @@ function Game(renderer) {
 				}
 				return frame
 			},
-			waypoint: function() {
-				this.tx = mapCenterX + cr() * 3
-				this.ty = mapRows + y
+			nextWaypoint: function() {
+				this.waypoint = freeSpot(0, mapRows + y, mapCols, 1)
 			}
-		})
+		}
+		e.nextWaypoint()
+		entities.push(e)
+		excludes.push(e)
 	}
 
 	// Create player.
