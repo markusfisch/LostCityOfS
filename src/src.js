@@ -174,16 +174,16 @@ function Game(renderer) {
 		if (keysDown[40] || keysDown[74]) {
 			y += max
 		}
-		if (cursed && (x || y)) {
-			x = -x
-			y = -y
-		}
 		if (pointers) {
 			const dx = stickX - pointersX[0],
 				dy = stickY - pointersY[0]
 			stickDelta = dx*dx + dy*dy
 			x = -Math.max(-max, Math.min(dx * warp, max))
 			y = Math.max(-max, Math.min(dy * warp, max))
+		}
+		if (cursed && (x || y)) {
+			x = -x
+			y = -y
 		}
 		moveTo(player, player.x + x, player.y + y, max)
 	}
