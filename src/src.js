@@ -157,6 +157,9 @@ function Game(renderer) {
 	}
 
 	function input() {
+		if (player.life <= 0) {
+			return
+		}
 		const max = player.speed
 		let x = 0, y = 0
 		if (keysDown[37] || keysDown[72]) {
@@ -239,11 +242,12 @@ function Game(renderer) {
 	// Create fauna.
 	for (let i = map.length; i--; ) {
 		if (map[i] == 13) {
+			const sprite = random() < .2 ? 18 : 17
 			entities.push({
 				x: i % mapCols,
 				y: (i / mapCols | 0) + .5,
 				dx: random() > .5 ? 1 : -1,
-				update: () => 16
+				update: () => sprite
 			})
 		}
 	}
@@ -343,22 +347,35 @@ function Game(renderer) {
 		return 0
 	}
 
+	function seeStars(e) {
+		spawn(16, pain, e, e.x, e.y - 1)
+	}
+
 	function attack(e, prey) {
 		e.attacking = 1
+		if (prey.life > 0) {
+			prey.life -= warp
+			if (prey.life <= 0) {
+				prey.resurrect()
+			}
+		}
 		shakeUntil = now + shakeDuration
-		spawn(17, pain, prey, prey.x, prey.y - 1)
+		seeStars(prey)
 	}
 
 	function hunt(e, prey) {
-		const dx = prey.x - e.x,
-			dy = prey.y - e.y,
-			d = dx*dx + dy*dy
 		e.attacking = 0
-		if (d < .3) {
-			attack(e, prey)
-			return
-		} else if (d < 20 && findPath(e, prey)) {
-			return
+		if (prey.life > 0) {
+			const dx = prey.x - e.x,
+				dy = prey.y - e.y,
+				d = dx*dx + dy*dy
+			if (d < .3) {
+				attack(e, prey)
+				return
+			}
+			if (d < 20 && findPath(e, prey)) {
+				return
+			}
 		}
 		if (!findPath(e, e.waypoint) ||
 				(Math.round(e.x) == Math.round(e.waypoint.x) &&
@@ -379,14 +396,14 @@ function Game(renderer) {
 			update: function() {
 				hunt(this, player)
 				if (this.attacking) {
-					return Math.round((now % 5000) / 100) % 2 ? 7 : 10
+					return Math.round((now % 200) / 100) % 2 ? 7 : 10
 				}
-				let frame = 7 + Math.round((now % 5000) / 100) % 5
-				if (frame > 9) {
+				let frame = Math.round((now % 500) / 100) % 5
+				if (frame > 2) {
 					frame -= 2
 					this.dx = -this.dx
 				}
-				return frame
+				return 7 + frame
 			},
 			nextWaypoint: function() {
 				this.waypoint = freeSpot(0, mapRows + y, mapCols, 1)
@@ -400,13 +417,30 @@ function Game(renderer) {
 	const player = {
 		x: lookX,
 		y: lookY,
+		dx: 1,
 		speed: .05,
 		lastSpawn: 0,
 		moving: 0,
+		life: 100,
+		resurrect: function() {
+			setTimeout(() => {
+				this.life = 100
+			}, 3000)
+		},
 		update: function() {
-			/*return 3 + (this.moving
-					? 1 + Math.round((now % 300) / 100) % 3
-					: Math.round((now % 1000) / 500) % 2)*/
+			if (this.life <= 0) {
+				seeStars(this)
+				return 4
+			}
+			if (this.moving) {
+				let frame = Math.round((now % 600) / 150) % 4
+				if (frame > 1) {
+					frame -= 2
+					this.dx = -this.dx
+				}
+				return 5 + frame
+			}
+			this.dx = Math.round((now % 2000) / 1000) % 2 ? -1 : 1
 			return 3
 		}
 	}
@@ -534,7 +568,8 @@ function Game(renderer) {
 		for (let i = dust.length; i--; ) {
 			const e = dust[i]
 			if (e.alive > now) {
-				renderer.push(e.sprite, e.x * xscale, -e.y * yscale)
+				const s = (e.alive - now) / dustLife
+				renderer.push(e.sprite, e.x * xscale, -e.y * yscale, s, s)
 			}
 		}
 
