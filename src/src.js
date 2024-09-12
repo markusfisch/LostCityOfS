@@ -5,7 +5,7 @@ function Game(renderer) {
 		mapCols = 16, mapRows = 128, map = [], nodes = [],
 		mapCenterX = mapCols >> 1, mapCenterY = mapRows >> 1,
 		entities = [], particles = [], clock = [],
-		blockables = [], dust = [],
+		blockables = [], dust = [], pain = [],
 		shakePattern = [.1, -.4, .7, -.3, .5, .2],
 		shakeLength = shakePattern.length,
 		shakeDuration = 300,
@@ -32,13 +32,18 @@ function Game(renderer) {
 		}, false)
 	}
 
-	function spawnDust(x, y) {
-		for (let i = dust.length; i--; ) {
-			const d = dust[i]
-			if (d.alive < now) {
-				d.alive = now + dustLife
-				d.x = x + (Math.random() - .5) / 2
-				d.y = y + Math.random() / 2
+	function spawn(what, a, en, x, y) {
+		if (now - en.lastSpawn < 50) {
+			return
+		}
+		en.lastSpawn = now
+		for (let i = a.length; i--; ) {
+			const e = a[i]
+			if (e.alive < now) {
+				e.sprite = what
+				e.alive = now + dustLife
+				e.x = x + (Math.random() - .5) / 2
+				e.y = y + (Math.random() - .5) / 2
 				break
 			}
 		}
@@ -85,9 +90,7 @@ function Game(renderer) {
 		e.x = x
 		e.y = y
 		e.dx = dx < 0 ? -1 : 1
-		if (now % 100 > 50) {
-			spawnDust(x, y)
-		}
+		spawn(2, dust, e, x, y)
 		return f == 1
 	}
 
@@ -194,7 +197,7 @@ function Game(renderer) {
 	// Create map.
 	for (let y = 0, i = 0; y < mapRows; ++y) {
 		for (let x = 0; x < mapCols; ++x, ++i) {
-			const sprite = random() < .2 ? 13 : 12
+			const sprite = random() < .2 && y < mapRows - 4 ? 13 : 12
 			map[i] = sprite
 			nodes[i] = {
 				x: x,
@@ -233,7 +236,7 @@ function Game(renderer) {
 		}
 	}
 
-	// Create stuff.
+	// Create fauna.
 	for (let i = map.length; i--; ) {
 		if (map[i] == 13) {
 			entities.push({
@@ -340,12 +343,19 @@ function Game(renderer) {
 		return 0
 	}
 
+	function attack(e, prey) {
+		e.attacking = 1
+		shakeUntil = now + shakeDuration
+		spawn(17, pain, prey, prey.x, prey.y - 1)
+	}
+
 	function hunt(e, prey) {
 		const dx = prey.x - e.x,
 			dy = prey.y - e.y,
 			d = dx*dx + dy*dy
+		e.attacking = 0
 		if (d < .3) {
-			shakeUntil = now + shakeDuration
+			attack(e, prey)
 			return
 		} else if (d < 20 && findPath(e, prey)) {
 			return
@@ -363,11 +373,16 @@ function Game(renderer) {
 				e = {
 			x: p.x,
 			y: p.y,
+			attacking: 0,
 			speed: .03,
+			lastSpawn: 0,
 			update: function() {
 				hunt(this, player)
-				let frame = 8 + Math.round((now % 5000) / 100) % 5
-				if (frame >= 11) {
+				if (this.attacking) {
+					return Math.round((now % 5000) / 100) % 2 ? 7 : 10
+				}
+				let frame = 7 + Math.round((now % 5000) / 100) % 5
+				if (frame > 9) {
 					frame -= 2
 					this.dx = -this.dx
 				}
@@ -386,7 +401,8 @@ function Game(renderer) {
 		x: lookX,
 		y: lookY,
 		speed: .05,
-		moving: false,
+		lastSpawn: 0,
+		moving: 0,
 		update: function() {
 			/*return 3 + (this.moving
 					? 1 + Math.round((now % 300) / 100) % 3
@@ -396,9 +412,12 @@ function Game(renderer) {
 	}
 	entities.push(player)
 
-	// Create dust.
+	// Create dust and pain particles.
 	for (let i = 0; i < 32; ++i) {
 		dust.push({alive: 0})
+	}
+	for (let i = 0; i < 16; ++i) {
+		pain.push({alive: 0})
 	}
 
 	// Create particles.
@@ -515,7 +534,7 @@ function Game(renderer) {
 		for (let i = dust.length; i--; ) {
 			const e = dust[i]
 			if (e.alive > now) {
-				renderer.push(2, e.x * xscale, -e.y * yscale)
+				renderer.push(e.sprite, e.x * xscale, -e.y * yscale)
 			}
 		}
 
@@ -528,6 +547,14 @@ function Game(renderer) {
 					-e.y * yscale,
 					e.dx, e.dy,
 					1)
+		}
+
+		// Push pain.
+		for (let i = pain.length; i--; ) {
+			const e = pain[i]
+			if (e.alive > now) {
+				renderer.push(e.sprite, e.x * xscale, -e.y * yscale)
+			}
 		}
 
 		// Push particles.
