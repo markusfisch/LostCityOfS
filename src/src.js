@@ -15,8 +15,8 @@ function Game(renderer) {
 		stickX, stickY, stickDelta,
 		viewXMin, viewXMax, viewYMin, viewYMax,
 		lookX = mapCols >> 1, lookY = mapRows - 4,
-		shakeUntil = 0,
 		start = Date.now(), cursed = 0,
+		shakeUntil = 0, fadeIn = start, fadeOut = 0,
 		now, warp, last = start
 
 	// Prevent pinch/zoom on iOS 11.
@@ -356,6 +356,7 @@ function Game(renderer) {
 		if (prey.life > 0) {
 			prey.life -= warp
 			if (prey.life <= 0) {
+				fadeOut = now
 				prey.resurrect()
 			}
 		}
@@ -424,8 +425,9 @@ function Game(renderer) {
 		life: 100,
 		resurrect: function() {
 			setTimeout(() => {
+				fadeIn = now
 				this.life = 100
-			}, 3000)
+			}, 2000)
 		},
 		update: function() {
 			if (this.life <= 0) {
@@ -513,6 +515,14 @@ function Game(renderer) {
 		return b.y - a.y
 	}
 
+	function fade() {
+		if (fadeOut > fadeIn) {
+			const fo = now - fadeOut
+			return 1 - Math.min(1, fo / 1000)
+		}
+		return Math.min(1, (now - fadeIn) / 1000)
+	}
+
 	function run() {
 		requestAnimationFrame(run)
 
@@ -534,12 +544,15 @@ function Game(renderer) {
 			lookY = lookY * .9 + py * .1
 		}
 
+		// Fade in/out.
+		const f = fade()
+		let r = f, g = f, b = f
+
 		// Shake view.
 		const xscale = renderer.xscale,
 			yscale = renderer.yscale
 		let vx = clamp(-lookX * xscale, viewXMax, viewXMin),
-			vy = clamp(lookY * yscale, viewYMin, viewYMax),
-			r = 1, g = 1, b = 1
+			vy = clamp(lookY * yscale, viewYMin, viewYMax)
 		if (shakeUntil > now) {
 			const power = (shakeUntil - now) / shakeDuration,
 				shakePower = power * .05
