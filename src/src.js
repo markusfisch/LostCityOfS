@@ -53,10 +53,6 @@ function Game(renderer) {
 		return Math.round(y) * mapCols + Math.round(x)
 	}
 
-	function blocks(x, y) {
-		return map[offset(x, y)] == 13
-	}
-
 	function canMoveTo(e, x, y) {
 		x = Math.round(x)
 		y = Math.round(y)
@@ -74,18 +70,30 @@ function Game(renderer) {
 		return 0
 	}
 
+	function blocks(x, y) {
+		return map[offset(x, y)] == 13
+	}
+
+	function clamp(value, min, max) {
+		return Math.min(Math.max(value, min), max)
+	}
+
 	function moveTo(e, tx, ty, speed) {
-		const dx = tx - e.x,
-			dy = ty - e.y
+		let dx = tx - e.x, dy = ty - e.y
 		if (!(e.moving = Math.abs(dx) + Math.abs(dy) > 0)) {
 			return
 		}
-		const f = Math.min(1, speed * warp / Math.sqrt(dx*dx + dy*dy)),
-			x = Math.min(mapCols - 1, Math.max(e.x + dx * f, 0)),
-			y = Math.min(mapRows - 1, Math.max(e.y + dy * f, 0))
-		if (e === player &&
-				(blocks(x, y) || !canMoveTo(e, x, y))) {
-			return 1
+		const f = Math.min(1, speed * warp / Math.sqrt(dx*dx + dy*dy))
+		let x = clamp(e.x + dx * f, 0, mapCols - 1),
+			y = clamp(e.y + dy * f, 0, mapRows - 1)
+		if (e === player && (blocks(x, y) || !canMoveTo(e, x, y))) {
+			if (!blocks(x, e.y) && canMoveTo(e, x, e.y)) {
+				y = e.y
+			} else if (!blocks(e.x, y) && canMoveTo(e, e.x, y)) {
+				x = e.x
+			} else {
+				return 1
+			}
 		}
 		e.x = x
 		e.y = y
@@ -506,10 +514,6 @@ function Game(renderer) {
 		}
 	}
 	window.onresize()
-
-	function clamp(value, min, max) {
-		return Math.min(Math.max(value, min), max)
-	}
 
 	function compareY(a, b) {
 		return b.y - a.y
