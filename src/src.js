@@ -799,9 +799,11 @@ function Game(renderer) {
 
 		// Virtual touch stick.
 		if (pointers) {
-			let size = clamp(1 - stickDelta / .05, .1, 1)
+			const scale = .5 / Math.max(renderer.xscale, renderer.yscale),
+				size = clamp(1 - stickDelta / .05, .1, 1) * scale * 1.5
 			renderer.push(0, -vx + stickX, -vy + stickY, size, size)
-			renderer.push(0, -vx + pointersX[0], -vy + pointersY[0])
+			renderer.push(0, -vx + pointersX[0], -vy + pointersY[0],
+				scale, scale)
 		}
 
 		renderer.render(r, g, b)
