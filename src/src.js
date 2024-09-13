@@ -7,13 +7,14 @@ function Game(renderer) {
 		entities = [], particles = [], clock = [],
 		blockables = [], dust = [], pain = [],
 		threatLevel = 4,
+		message = document.getElementById('M'),
 		shakePattern = [.1, -.4, .7, -.3, .5, .2],
 		shakeLength = shakePattern.length,
 		shakeDuration = 300,
 		dustLife = 150
 
 	let seed = 1, pointers = 0,
-		stickX, stickY, stickDelta,
+		stickX, stickY, stickDelta, sayId = 0,
 		viewXMin, viewXMax, viewYMin, viewYMax,
 		lookX = mapCols >> 1, lookY = mapRows - 4,
 		start = Date.now(), cursed = 0,
@@ -32,6 +33,31 @@ function Game(renderer) {
 			event.preventDefault()
 		}, false)
 	}
+
+	function say(what, after) {
+		const text = what.shift()
+		message.innerHTML = text
+		message.style.display = "block"
+		clearTimeout(sayId)
+		sayId = setTimeout(() => {
+			if (what.length < 1) {
+				message.style.display = "none"
+				after && after()
+			} else {
+				say(what, after)
+			}
+		}, 1000 + 200 * text.split(' ').length)
+	}
+	say([
+		"Somewhere in Africa...",
+		"In search of the lost city of S",
+		"S, like superstition,",
+		"where exactly this was invented",
+		"as legend has it.",
+		"And to this day, a mishap still happens here",
+		"every 13th second.",
+		"Head north to find it!",
+	])
 
 	function spawn(what, a, en, x, y) {
 		if (now - en.lastSpawn < 50) {
@@ -452,6 +478,21 @@ function Game(renderer) {
 		if (prey.life > 0) {
 			prey.life -= warp
 			if (prey.life <= 0) {
+				const messages = [
+					"Phew, that was surprisingly painful!",
+					"No need to get excited big guy!",
+					"I'm taking a break.",
+					"How unkind.",
+					"I'm just going to lie down here. And cry a little.",
+					"Wait until I'm that strong too!",
+					"That was a set of whistles!",
+					"That did the trick!",
+					"Over and out.",
+					"That stings!",
+					"I really should get going.",
+					"Boys don't cry.",
+				]
+				say([messages[Math.floor(Math.random() * messages.length)]])
 				fadeOut = now
 				prey.resurrect()
 			}
@@ -483,7 +524,7 @@ function Game(renderer) {
 
 	// Create gorillas.
 	const gorillas = Math.round((mapRows - sandRow) / threatLevel)
-	for (let i = 0, y = mapRows - 9; i < gorillas; ++i, y -= 2) {
+	for (let i = 0, y = mapRows - 11; i < gorillas; ++i, y -= 2) {
 		const p = freeSpot(0, y, mapCols, 1),
 				e = {
 			x: p.x,
@@ -643,6 +684,14 @@ function Game(renderer) {
 
 			if (Math.abs(lookY - idol.y) < 2) {
 				finish = 1
+				say([
+					"I found it!",
+					"The lost idol of superstition!",
+					"With the power to end all superstition.",
+					"Or so they say.",
+				], function() {
+					fadeOut = Date.now()
+				})
 			}
 		}
 
