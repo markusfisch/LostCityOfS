@@ -105,6 +105,11 @@ function Game(renderer) {
 		return Math.min(Math.max(value, min), max)
 	}
 
+	function isWater(x, y) {
+		const tile = map[offset(x, y)]
+		return tile >= 22 && tile < 26
+	}
+
 	function moveTo(e, tx, ty, speed) {
 		let dx = tx - e.x, dy = ty - e.y
 		if (!(e.moving = Math.abs(dx) + Math.abs(dy) > 0)) {
@@ -125,6 +130,7 @@ function Game(renderer) {
 		e.x = x
 		e.y = y
 		e.dx = dx < 0 ? -1 : 1
+		e.sink = isWater(x, y)
 		spawn(2, dust, e, x, y)
 		return f == 1
 	}
@@ -755,7 +761,7 @@ function Game(renderer) {
 					e.x * xscale,
 					-e.y * yscale,
 					e.dx, e.dy,
-					1)
+					1, e.sink)
 		}
 
 		// Push pain.
@@ -855,13 +861,20 @@ function Renderer(atlas) {
 		x1, y1,
 		x2, y2,
 		x3, y3,
-		x4, y4
+		x4, y4,
+		sy, sv
 	) {
 		const offset = sprite << 3,
 			l = atlas.coords[offset] + nudge,
 			t = atlas.coords[offset + 1] + nudge,
-			r = atlas.coords[offset + 6] - nudge,
-			b = atlas.coords[offset + 7] - nudge
+			r = atlas.coords[offset + 6] - nudge
+
+		// Sink.
+		let b = atlas.coords[offset + 7]
+		b -= (b - t) * sv
+		b -= nudge
+		y1 -= sy
+		y2 -= sy
 
 		// Unwrapped for speed.
 		let i = idx * elementsPerVertex
@@ -917,7 +930,7 @@ function Renderer(atlas) {
 
 			verts = 0
 		},
-		push: function(sprite, x, y, h, v, ground) {
+		push: function(sprite, x, y, h, v, ground, sink) {
 			const fx = x + this.viewX, fy = y + this.viewY
 			if (fx < -2 || fy > 2 || fx > 2 || fy < -2) {
 				// Skip out of view sprites.
@@ -926,6 +939,7 @@ function Renderer(atlas) {
 			const size = atlas.sizes[sprite], sy = size[1]
 			h = (h || 1) * size[0]
 			v = (v || 1) * sy
+			sink = sink ? .2 : 0
 			if (ground) {
 				y += sy * y2
 			}
@@ -940,7 +954,8 @@ function Renderer(atlas) {
 				x - x2 * h, y + y2 * v,
 				x + x2 * h, y + y2 * v,
 				x - x2 * h, y - y2 * v,
-				x + x2 * h, y - y2 * v
+				x + x2 * h, y - y2 * v,
+				sink * this.yscale, sink
 			)
 			verts += 6
 		},
