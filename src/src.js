@@ -202,10 +202,6 @@ function Game(renderer) {
 		return (seed = (seed * 9301 + 49297) % 233280) / 233280
 	}
 
-	function cr() {
-		return random() - .5
-	}
-
 	// Initialize map.
 	const map3 = Math.floor(mapRows / 3),
 			waterRow = map3,
@@ -248,22 +244,101 @@ function Game(renderer) {
 		}
 	}
 
+	// Create player.
+	const player = {
+		x: lookX,
+		y: lookY,
+		dx: 1,
+		speed: .05,
+		lastSpawn: 0,
+		moving: 0,
+		life: 100,
+		resurrect: function() {
+			setTimeout(() => {
+				fadeIn = now
+				this.life = 100
+			}, 2000)
+		},
+		update: function() {
+			if (this.life <= 0) {
+				seeStars(this)
+				return 4
+			}
+			if (this.moving) {
+				let frame = Math.round((now % 600) / 150) % 4
+				if (frame > 1) {
+					frame -= 2
+					this.dx = -this.dx
+				}
+				return 5 + frame
+			}
+			this.dx = Math.round((now % 2000) / 1000) % 2 ? -1 : 1
+			return 3
+		}
+	}
+	entities.push(player)
 
-	// Set idol.
+	// Create idol.
 	const idol = {
 		x: mapCenterX,
-		y: 4,
+		y: 4.5,
 		update: () => 25
 	}
 	map[offset(mapCenterX, 4)] |= 128
 	entities.push(idol)
+
+	function nearPlayer(x, y) {
+		const dx = x - player.x,
+			dy = y - player.y
+		return dx*dx + dy*dy < 3
+	}
+
+	// Put obstacles on the map.
+	function setObstacle(x, y) {
+		if (nearPlayer(x, y)) {
+			return
+		}
+		const o = offset(x, y)
+		if (map[o] & 128) {
+			return
+		}
+		let sprite
+		if (y < waterRow) {
+			sprite = random() < .2 ? 23 : 24
+			map[o] = sprite | 128
+			return
+		} else if (y == waterRow) {
+			return
+		} else if (y < sandRow) {
+			sprite = 17
+		} else if (y == sandRow) {
+			return
+		} else {
+			sprite = random() < .2 ? 18 : 17
+		}
+		map[o] |= 128
+		entities.push({
+			x: x,
+			y: y + .5,
+			dx: random() > .5 ? 1 : -1,
+			update: () => sprite
+		})
+	}
+
+	for (let y = 0; y < mapRows; ++y) {
+		for (let x = 0; x < mapCols; ++x) {
+			if (random() < .2) {
+				setObstacle(x, y)
+			}
+		}
+	}
 
 	function freeSpot(l, t, w, h) {
 		let x, y
 		do {
 			x = l + random() * w - .5
 			y = t + random() * h - .5
-		} while (blocks(x, y))
+		} while (nearPlayer(x, y) || blocks(x, y))
 		return {
 			x: x,
 			y: y
@@ -271,17 +346,6 @@ function Game(renderer) {
 	}
 
 	// Create fauna.
-	for (let i = map.length; i--; ) {
-		if (map[i] & 128) {
-			const sprite = random() < .2 ? 18 : 17
-			entities.push({
-				x: i % mapCols,
-				y: (i / mapCols | 0) + .5,
-				dx: random() > .5 ? 1 : -1,
-				update: () => sprite
-			})
-		}
-	}
 	const jungleRows = Math.round((mapRows - sandRow) * .8)
 	for (let i = 0; i < 1000; ++i) {
 		const p = freeSpot(0, mapRows - jungleRows, mapCols, jungleRows)
@@ -493,40 +557,6 @@ function Game(renderer) {
 		e.nextWaypoint()
 		entities.push(e)
 	}
-
-	// Create player.
-	const player = {
-		x: lookX,
-		y: lookY,
-		dx: 1,
-		speed: .05,
-		lastSpawn: 0,
-		moving: 0,
-		life: 100,
-		resurrect: function() {
-			setTimeout(() => {
-				fadeIn = now
-				this.life = 100
-			}, 2000)
-		},
-		update: function() {
-			if (this.life <= 0) {
-				seeStars(this)
-				return 4
-			}
-			if (this.moving) {
-				let frame = Math.round((now % 600) / 150) % 4
-				if (frame > 1) {
-					frame -= 2
-					this.dx = -this.dx
-				}
-				return 5 + frame
-			}
-			this.dx = Math.round((now % 2000) / 1000) % 2 ? -1 : 1
-			return 3
-		}
-	}
-	entities.push(player)
 
 	// Create dust and pain particles.
 	for (let i = 0; i < 32; ++i) {
