@@ -6,6 +6,7 @@ function Game(renderer) {
 		mapCenterX = mapCols >> 1, mapCenterY = mapRows >> 1,
 		entities = [], particles = [], clock = [],
 		blockables = [], dust = [], pain = [],
+		threatLevel = 4,
 		shakePattern = [.1, -.4, .7, -.3, .5, .2],
 		shakeLength = shakePattern.length,
 		shakeDuration = 300,
@@ -17,7 +18,7 @@ function Game(renderer) {
 		lookX = mapCols >> 1, lookY = mapRows - 4,
 		start = Date.now(), cursed = 0,
 		shakeUntil = 0, fadeIn = start, fadeOut = 0,
-		now, warp, last = start
+		now, warp, last = start, finish = 0
 
 	// Prevent pinch/zoom on iOS 11.
 	if ('ontouchstart' in document) {
@@ -71,7 +72,7 @@ function Game(renderer) {
 	}
 
 	function blocks(x, y) {
-		return map[offset(x, y)] == 13
+		return map[offset(x, y)] & 128
 	}
 
 	function clamp(value, min, max) {
@@ -205,11 +206,23 @@ function Game(renderer) {
 		return random() - .5
 	}
 
-	// Create map.
-	for (let y = 0, i = 0; y < mapRows; ++y) {
+	// Initialize map.
+	const map3 = Math.floor(mapRows / 3),
+			waterRow = map3,
+			sandRow = map3 * 2,
+			areas = [
+		{sprite: 22, y: waterRow}, // water
+		{sprite: 21, y: waterRow + 1}, // water to sand
+		{sprite: 20, y: sandRow}, // sand
+		{sprite: 19, y: sandRow + 1}, // sand to soil
+		{sprite: 12, y: mapRows}, // soil
+	]
+	for (let y = 0, i = 0, area = 0, a = areas[area]; y < mapRows; ++y) {
 		for (let x = 0; x < mapCols; ++x, ++i) {
-			const sprite = random() < .2 && y < mapRows - 4 ? 13 : 12
-			map[i] = sprite
+			if (y > a.y) {
+				a = areas[++area]
+			}
+			map[i] = a.sprite
 			nodes[i] = {
 				x: x,
 				y: y
@@ -235,6 +248,16 @@ function Game(renderer) {
 		}
 	}
 
+
+	// Set idol.
+	const idol = {
+		x: mapCenterX,
+		y: 4,
+		update: () => 25
+	}
+	map[offset(mapCenterX, 4)] |= 128
+	entities.push(idol)
+
 	function freeSpot(l, t, w, h) {
 		let x, y
 		do {
@@ -249,7 +272,7 @@ function Game(renderer) {
 
 	// Create fauna.
 	for (let i = map.length; i--; ) {
-		if (map[i] == 13) {
+		if (map[i] & 128) {
 			const sprite = random() < .2 ? 18 : 17
 			entities.push({
 				x: i % mapCols,
@@ -259,8 +282,9 @@ function Game(renderer) {
 			})
 		}
 	}
+	const jungleRows = Math.round((mapRows - sandRow) * .8)
 	for (let i = 0; i < 1000; ++i) {
-		const p = freeSpot(0, mapRows - 32, mapCols, 32)
+		const p = freeSpot(0, mapRows - jungleRows, mapCols, jungleRows)
 		entities.push({
 			x: p.x,
 			y: p.y,
@@ -270,7 +294,7 @@ function Game(renderer) {
 	}
 	for (let i = 0; i < 200; ++i) {
 		const sprite = i % 2 == 0 ? 14 : 15,
-			p = freeSpot(0, 0, mapCols, mapRows)
+			p = freeSpot(0, sandRow, mapCols, mapRows - sandRow)
 		entities.push({
 			x: p.x,
 			y: p.y,
@@ -372,9 +396,9 @@ function Game(renderer) {
 		seeStars(prey)
 	}
 
-	function hunt(e, prey) {
+	function hunt(e, prey, top, bottom) {
 		e.attacking = 0
-		if (prey.life > 0) {
+		if (prey.life > 0 && prey.y > top && prey.y < bottom) {
 			const dx = prey.x - e.x,
 				dy = prey.y - e.y,
 				d = dx*dx + dy*dy
@@ -382,7 +406,7 @@ function Game(renderer) {
 				attack(e, prey)
 				return
 			}
-			if (d < 20 && findPath(e, prey)) {
+			if (d < e.sight && findPath(e, prey)) {
 				return
 			}
 		}
@@ -393,17 +417,19 @@ function Game(renderer) {
 		}
 	}
 
-	// Create enemies.
-	for (let i = 0, y = -9; i < 10; ++i, y -= 2) {
-		const p = freeSpot(0, mapRows + y, mapCols, 1),
+	// Create gorillas.
+	const gorillas = Math.round((mapRows - sandRow) / threatLevel)
+	for (let i = 0, y = mapRows - 9; i < gorillas; ++i, y -= 2) {
+		const p = freeSpot(0, y, mapCols, 1),
 				e = {
 			x: p.x,
 			y: p.y,
+			sight: 20,
 			attacking: 0,
 			speed: .03,
 			lastSpawn: 0,
 			update: function() {
-				hunt(this, player)
+				hunt(this, player, sandRow, mapRows)
 				if (this.attacking) {
 					return Math.round((now % 200) / 100) % 2 ? 7 : 10
 				}
@@ -415,7 +441,53 @@ function Game(renderer) {
 				return 7 + frame
 			},
 			nextWaypoint: function() {
-				this.waypoint = freeSpot(0, mapRows + y, mapCols, 1)
+				this.waypoint = freeSpot(0, y, mapCols, 1)
+			}
+		}
+		e.nextWaypoint()
+		entities.push(e)
+	}
+
+	// Create scorpions.
+	const scorpions = Math.round((sandRow - waterRow) / threatLevel)
+	for (let i = 0, y = sandRow; i < scorpions; ++i, y -= 2) {
+		const p = freeSpot(0, y, mapCols, 1),
+				e = {
+			x: p.x,
+			y: p.y,
+			sight: 20,
+			attacking: 0,
+			speed: .04,
+			lastSpawn: 0,
+			update: function() {
+				hunt(this, player, waterRow, sandRow)
+				return Math.round((now % 200) / 100) % 2 ? 26 : 27
+			},
+			nextWaypoint: function() {
+				this.waypoint = freeSpot(0, y, mapCols, 1)
+			}
+		}
+		e.nextWaypoint()
+		entities.push(e)
+	}
+
+	// Create piranhas.
+	const piranhas = Math.round(waterRow / threatLevel)
+	for (let i = 0, y = waterRow; i < piranhas; ++i, y -= 2) {
+		const p = freeSpot(0, y, mapCols, 1),
+				e = {
+			x: p.x,
+			y: p.y,
+			sight: 80,
+			attacking: 0,
+			speed: .03,
+			lastSpawn: 0,
+			update: function() {
+				hunt(this, player, 6, waterRow)
+				return Math.round((now % 200) / 100) % 2 ? 28 : 29
+			},
+			nextWaypoint: function() {
+				this.waypoint = freeSpot(0, y, mapCols, 1)
 			}
 		}
 		e.nextWaypoint()
@@ -536,7 +608,13 @@ function Game(renderer) {
 
 		const elapsed = (now - start) / 1000,
 				elapsedMod13 = elapsed % 13
-		cursed = elapsed < 3 ? 0 : 1 - Math.min(elapsedMod13, 1) / 1
+		if (!finish) {
+			cursed = elapsed < 3 ? 0 : 1 - Math.min(elapsedMod13, 1) / 1
+
+			if (Math.abs(lookY - idol.y) < 2) {
+				finish = 1
+			}
+		}
 
 		input()
 
@@ -576,7 +654,7 @@ function Game(renderer) {
 				skip = mapCols - (r - l)
 			for (let i = t * mapCols + l, y = t; y < b; ++y, i += skip) {
 				for (let x = l; x < r; ++x, ++i) {
-					renderer.push(map[i], x * xscale, -y * yscale)
+					renderer.push(map[i] & 127, x * xscale, -y * yscale)
 				}
 			}
 		}
@@ -615,17 +693,19 @@ function Game(renderer) {
 			renderer.push(e.update(), e.x, -e.y)
 		}
 
-		if (cursed) {
-			const power = 1 + cursed * .5
-			r *= power
-			g *= power
-			b *= power
-		}
+		if (!finish) {
+			if (cursed) {
+				const power = 1 + cursed * .5
+				r *= power
+				g *= power
+				b *= power
+			}
 
-		// Push time.
-		for (let i = 0; i < elapsedMod13; ++i) {
-			const e = clock[i]
-			renderer.push(1, e.x - vx, e.y - vy)
+			// Push time.
+			for (let i = 0; i < elapsedMod13; ++i) {
+				const e = clock[i]
+				renderer.push(1, e.x - vx, e.y - vy)
+			}
 		}
 
 		// Virtual touch stick.
