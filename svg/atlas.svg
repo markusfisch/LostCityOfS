@@ -429,12 +429,12 @@
   <path style="fill: rgb(255, 255, 255);" d="M -467 192 L -511 187 L -490 141 L -456 172 L -467 192 Z"/>
   <path style="fill: rgb(218, 218, 218);" d="M -523 164 L -511 187 L -490 141 L -523 164 Z"/>
   <rect width="100" height="100" style="fill: rgb(80, 117, 228);" y="-1" x="-550"/>
-  <path style="fill: rgb(255, 255, 255);" d="M -527 80 L -522 31 L -507 12 L -482 10 L -467 29 L -461 76 L -527 80 Z"/>
-  <path style="fill: rgb(218, 218, 218);" d="M -512 34 L -499 37 L -501 44 L -512 34 Z"/>
-  <path style="fill: rgb(218, 218, 218); transform-origin: -482.383px 39.3881px;" d="M -488 47 L -475 42 L -477 36 L -488 47 Z" transform="matrix(-1, 0, 0, -1, -0.000004, 0.000009)"/>
-  <path style="fill: rgb(218, 218, 218);" d="M -513 48 L -515 59 L -493 61 L -472 56 L -476 47 L -481 56 L -486 49 L -491 58 L -496 49 L -501 58 L -504 49 L -508 55 L -513 48 Z"/>
-  <path style="fill: rgb(218, 218, 218);" d="M -527 80 L -522 31 L -507 12 L -519 18 L -530 31 L -536 70 L -527 80 Z"/>
   <path style="fill: rgba(255, 255, 255, 0.133);" d="M -536 70 L -529 90 L -475 94 L -461 76 L -536 70 Z"/>
+  <path style="fill: rgb(255, 255, 255);" d="M -527 80 L -522 31 L -507 12 L -482 10 L -467 29 L -461 76 L -527 80 Z"/>
+  <path style="fill: rgb(168, 168, 168);" d="M -512 34 L -499 37 L -501 44 L -512 34 Z"/>
+  <path style="fill: rgb(168, 168, 168); transform-origin: -482.383px 39.3881px;" d="M -477 32 L -490 37 L -488 43 L -477 32 Z"/>
+  <path style="fill: rgb(168, 168, 168);" d="M -513 48 L -515 59 L -493 61 L -472 56 L -476 47 L -481 56 L -486 49 L -491 58 L -496 49 L -501 58 L -504 49 L -508 55 L -513 48 Z"/>
+  <path style="fill: rgb(218, 218, 218);" d="M -527 80 L -522 31 L -507 12 L -519 18 L -530 31 L -536 70 L -527 80 Z"/>
   <path style="fill: rgb(212, 165, 71); transform-origin: -390.803px 519.509px;" d="M -356 521 C -389 514 -404 530 -426 518 C -406 520 -378 508 -356 521 Z"/>
   <path style="fill: rgba(255, 255, 255, 0.133);" d="M -428 472 C -398 462 -388 484 -349 480 C -377 477 -400 454 -428 472 Z"/>
   <path style="fill: rgba(255, 255, 255, 0.133);" d="M -407 454 C -385 447 -377 463 -348 460 C -369 458 -386 441 -407 454 Z"/>
@@ -655,7 +655,10 @@
   <path style="fill: rgb(103, 136, 233);" d="M 563 378 L 572 370 L 593 363 L 605 364 L 614 362 L 618 371 L 629 378 L 641 364 L 637 384 L 640 399 L 628 390 L 608 404 L 601 401 L 593 403 L 559 396 L 556 391 L 559 393 L 560 391 L 562 393 L 562 391 L 566 393 L 564 389 L 561 387 L 563 378 Z"/>
   <ellipse style="fill: rgba(52, 52, 52, 0.498);" cx="573" cy="386" rx="3" ry="3"/>
   <ellipse style="fill: rgb(255, 255, 255);" cx="574" cy="385" rx="1" ry="1"/>
-  <ellipse style="fill: rgba(0, 0, 0, 0.133);" cy="91" rx="13" ry="3" cx="47"/>
-  <path d="M 59 86 C 58 94 35 94 35 86 C 36 70 59 72 59 86 Z" style="fill: rgb(204, 204, 204); transform-origin: 47.3532px 82.7611px;"/>
-  <path d="M 59 86 C 58 94 35 94 35 86 C 46 82 46 90 59 86 Z" style="fill: rgb(174, 174, 174); transform-origin: 47.3532px 86.8034px;"/>
+  <path style="fill: rgba(255, 255, 255, 0.133);" d="M 14 70 L 21 90 L 75 94 L 89 76 L 14 70 Z"/>
+  <path style="fill: rgb(255, 255, 255);" d="M 23 80 L 28 31 L 43 12 L 68 10 L 83 29 L 89 76 L 23 80 Z"/>
+  <path style="fill: rgb(168, 168, 168);" d="M 38 34 L 51 37 L 49 44 L 38 34 Z"/>
+  <path style="fill: rgb(168, 168, 168); transform-origin: 67.6159px 39.3882px;" d="M 73 32 L 60 37 L 62 43 L 73 32 Z"/>
+  <path style="fill: rgb(168, 168, 168);" d="M 37 48 L 35 59 L 57 61 L 78 56 L 74 47 L 69 56 L 64 49 L 59 58 L 54 49 L 49 58 L 46 49 L 42 55 L 37 48 Z"/>
+  <path style="fill: rgb(218, 218, 218);" d="M 23 80 L 28 31 L 43 12 L 31 18 L 20 31 L 14 70 L 23 80 Z"/>
 </svg>
