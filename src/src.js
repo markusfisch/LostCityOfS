@@ -696,7 +696,10 @@ function Game(renderer) {
 					"With the power to end all superstition.",
 					"Or so they say.",
 				], function() {
-					fadeOut = Date.now()
+					fadeOut = now
+					setTimeout(function() {
+						say(["Thanks for playing."])
+					}, 2000)
 				})
 			}
 		}
