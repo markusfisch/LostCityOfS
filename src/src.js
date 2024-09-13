@@ -388,9 +388,10 @@ function Game(renderer) {
 			update: () => 11
 		})
 	}
+	const desertStart = waterRow + 2
 	for (let i = 0; i < 200; ++i) {
-		const sprite = i % 2 == 0 ? 14 : 15,
-			p = freeSpot(0, sandRow, mapCols, mapRows - sandRow)
+		const sprite = 13 + (i % 3),
+			p = freeSpot(0, desertStart, mapCols, mapRows - desertStart)
 		entities.push({
 			x: p.x,
 			y: p.y,
