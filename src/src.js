@@ -17,7 +17,7 @@ function Game(renderer) {
 		stickX, stickY, stickDelta, sayId = 0,
 		viewXMin, viewXMax, viewYMin, viewYMax,
 		lookX = mapCols >> 1, lookY = mapRows - 4,
-		start = Date.now(), cursed = 0,
+		start = Date.now(), cursed = 0, cease = 0,
 		shakeUntil = 0, fadeIn = start, fadeOut = 0,
 		now, warp, last = start, finish = 0
 
@@ -111,6 +111,9 @@ function Game(renderer) {
 	}
 
 	function moveTo(e, tx, ty, speed) {
+		if (e.stunned > now) {
+			return
+		}
 		let dx = tx - e.x, dy = ty - e.y
 		if (!(e.moving = Math.abs(dx) + Math.abs(dy) > 0)) {
 			return
@@ -118,13 +121,16 @@ function Game(renderer) {
 		const f = Math.min(1, speed * warp / Math.sqrt(dx*dx + dy*dy))
 		let x = clamp(e.x + dx * f, 0, mapCols - 1),
 			y = clamp(e.y + dy * f, 0, mapRows - 1)
-		if (e === player && (blocks(x, y) || !canMoveTo(e, x, y))) {
-			if (!blocks(x, e.y) && canMoveTo(e, x, e.y)) {
-				y = e.y
-			} else if (!blocks(e.x, y) && canMoveTo(e, e.x, y)) {
-				x = e.x
-			} else {
-				return 1
+		if (e === player) {
+			cease = 0
+			if ((blocks(x, y) || !canMoveTo(e, x, y))) {
+				if (!blocks(x, e.y) && canMoveTo(e, x, e.y)) {
+					y = e.y
+				} else if (!blocks(e.x, y) && canMoveTo(e, e.x, y)) {
+					x = e.x
+				} else {
+					return 1
+				}
 			}
 		}
 		e.x = x
@@ -285,9 +291,11 @@ function Game(renderer) {
 		lastSpawn: 0,
 		moving: 0,
 		life: 100,
+		stunned: 0,
 		resurrect: function() {
 			setTimeout(() => {
 				fadeIn = now
+				cease = now + 5000
 				this.life = 100
 			}, 2000)
 		},
@@ -498,6 +506,7 @@ function Game(renderer) {
 		e.attacking = 1
 		if (prey.life > 0) {
 			prey.life -= warp
+			prey.stunned = now + e.stun
 			if (prey.life <= 0) {
 				const messages = [
 					"Phew, that was surprisingly painful!",
@@ -511,6 +520,7 @@ function Game(renderer) {
 					"Over and out.",
 					"That stings!",
 					"Boys don't cry.",
+					"I think I take a little nap.",
 				]
 				say([messages[Math.floor(Math.random() * messages.length)]])
 				fadeOut = now
@@ -523,7 +533,8 @@ function Game(renderer) {
 
 	function hunt(e, prey, top, bottom) {
 		e.attacking = 0
-		if (prey.life > 0 && prey.y > top && prey.y < bottom) {
+		if (!finish && cease < now &&
+				prey.life > 0 && prey.y > top && prey.y < bottom) {
 			const dx = prey.x - e.x,
 				dy = prey.y - e.y,
 				d = dx*dx + dy*dy
@@ -551,7 +562,8 @@ function Game(renderer) {
 			y: p.y,
 			sight: 20,
 			attacking: 0,
-			speed: .03,
+			stun: 10,
+			speed: .03 + random() * .01,
 			lastSpawn: 0,
 			update: function() {
 				hunt(this, player, sandRow, mapRows)
@@ -582,7 +594,8 @@ function Game(renderer) {
 			y: p.y,
 			sight: 20,
 			attacking: 0,
-			speed: .04,
+			stun: 5,
+			speed: .04 + random() * .01,
 			lastSpawn: 0,
 			update: function() {
 				hunt(this, player, waterRow, sandRow)
@@ -605,7 +618,8 @@ function Game(renderer) {
 			y: p.y,
 			sight: 80,
 			attacking: 0,
-			speed: .03,
+			stun: 5,
+			speed: .03 + random() * .02,
 			lastSpawn: 0,
 			update: function() {
 				hunt(this, player, 6, waterRow)
