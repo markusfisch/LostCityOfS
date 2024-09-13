@@ -698,7 +698,7 @@ function Game(renderer) {
 				], function() {
 					fadeOut = now
 					setTimeout(function() {
-						say(["Thanks for playing."])
+						document.getElementById("E").style.display = "block"
 					}, 2000)
 				})
 			}
