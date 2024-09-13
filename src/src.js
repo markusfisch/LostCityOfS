@@ -49,14 +49,12 @@ function Game(renderer) {
 		}, 1000 + 200 * text.split(' ').length)
 	}
 	say([
-		"Somewhere in Africa...",
-		"In search of the lost city of S",
-		"S, like superstition,",
-		"where exactly this was invented",
-		"as legend has it.",
-		"And to this day, a mishap still happens here",
-		"every 13th second.",
-		"Head north to find it!",
+		"In search of the lost city of S,",
+		"S for superstition,",
+		"where exactly that was invented,",
+		"as legend has it. And to this day,",
+		"a mishap happens here every 13 seconds.",
+		"Head north and be careful!",
 	])
 
 	function spawn(what, a, en, x, y) {
@@ -521,6 +519,7 @@ function Game(renderer) {
 					"That stings!",
 					"Boys don't cry.",
 					"I think I take a little nap.",
+					"Let's not do this again.",
 				]
 				say([messages[Math.floor(Math.random() * messages.length)]])
 				fadeOut = now
