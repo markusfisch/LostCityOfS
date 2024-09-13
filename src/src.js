@@ -325,42 +325,56 @@ function Game(renderer) {
 		return dx*dx + dy*dy < 3
 	}
 
-	// Put obstacles on the map.
-	function setObstacle(x, y) {
-		if (nearPlayer(x, y)) {
-			return
-		}
-		const o = offset(x, y)
-		if (map[o] & 128) {
-			return
-		}
-		let sprite
-		if (y < waterRow) {
-			sprite = random() < .2 ? 23 : 24
-			map[o] = sprite | 128
-			return
-		} else if (y == waterRow) {
-			return
-		} else if (y < sandRow) {
-			sprite = 17
-		} else if (y == sandRow) {
-			return
-		} else {
-			sprite = random() < .2 ? 18 : 17
-		}
-		map[o] |= 128
-		entities.push({
-			x: x,
-			y: y + .5,
-			dx: random() > .5 ? 1 : -1,
-			update: () => sprite
-		})
-	}
-
+	// Put blocking tiles on the map.
 	for (let y = 0; y < mapRows; ++y) {
 		for (let x = 0; x < mapCols; ++x) {
-			if (random() < .2) {
-				setObstacle(x, y)
+			if (random() < .2 && !nearPlayer(x, y)) {
+				map[offset(x, y)] |= 128
+			}
+		}
+	}
+
+	// Remove diagonal corners because they are visually irritating.
+	for (let y = 1; y < mapRows - 1; ++y) {
+		for (let x = 1; x < mapCols - 1; ++x) {
+			const o = offset(x, y - 1)
+			if (map[o] & 128 && (
+					map[offset(x - 1, y)] & 128 ||
+					map[offset(x + 1, y)] & 128)) {
+				map[o] &= 127
+			}
+		}
+	}
+
+	// Set entities over blocking tiles.
+	for (let y = 0; y < mapRows; ++y) {
+		for (let x = 0; x < mapCols; ++x) {
+			if (x == Math.floor(idol.x) &&
+					y == Math.floor(idol.y)) {
+				continue
+			}
+			const o = offset(x, y)
+			if (map[o] & 128) {
+				let sprite
+				if (y < waterRow) {
+					sprite = random() < .2 ? 23 : 24
+					map[o] = sprite | 128
+					continue
+				} else if (y == waterRow) {
+					continue
+				} else if (y < sandRow) {
+					sprite = 17
+				} else if (y == sandRow) {
+					continue
+				} else {
+					sprite = random() < .2 ? 18 : 17
+				}
+				entities.push({
+					x: x,
+					y: y + .5,
+					dx: random() > .5 ? 1 : -1,
+					update: () => sprite
+				})
 			}
 		}
 	}
@@ -489,14 +503,13 @@ function Game(renderer) {
 					"Phew, that was surprisingly painful!",
 					"No need to get excited big guy!",
 					"I'm taking a break.",
-					"How unkind.",
+					"How very unkind.",
 					"I'm just going to lie down here. And cry a little.",
 					"Wait until I'm that strong too!",
 					"That was a set of whistles!",
 					"That did the trick!",
 					"Over and out.",
 					"That stings!",
-					"I really should get going.",
 					"Boys don't cry.",
 				]
 				say([messages[Math.floor(Math.random() * messages.length)]])
