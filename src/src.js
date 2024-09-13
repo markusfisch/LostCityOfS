@@ -573,7 +573,7 @@ function Game(renderer) {
 			lastSpawn: 0,
 			update: function() {
 				hunt(this, player, waterRow, sandRow)
-				return Math.round((now % 200) / 100) % 2 ? 26 : 27
+				return 26 + Math.round((now % 200) / 100) % 2
 			},
 			nextWaypoint: function() {
 				this.waypoint = freeSpot(0, y, mapCols, 1)
@@ -596,7 +596,7 @@ function Game(renderer) {
 			lastSpawn: 0,
 			update: function() {
 				hunt(this, player, 6, waterRow)
-				return Math.round((now % 200) / 100) % 2 ? 28 : 29
+				return 28 + Math.round((now % 200) / 100) % 2
 			},
 			nextWaypoint: function() {
 				this.waypoint = freeSpot(0, y, mapCols, 1)
