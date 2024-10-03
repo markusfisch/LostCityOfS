@@ -1,7 +1,8 @@
 "use strict"
 
 function Game(renderer) {
-	const pointersX = [], pointersY = [], keysDown = [],
+	const hasTouch = 'ontouchstart' in document,
+		pointersX = [], pointersY = [], keysDown = [],
 		mapCols = 16, mapRows = 128, map = [], nodes = [],
 		mapCenterX = mapCols >> 1, mapCenterY = mapRows >> 1,
 		entities = [], particles = [], clock = [],
@@ -22,7 +23,7 @@ function Game(renderer) {
 		now, warp, last = start, finish = 0
 
 	// Prevent pinch/zoom on iOS 11.
-	if ('ontouchstart' in document) {
+	if (hasTouch) {
 		document.addEventListener('gesturestart', function(event) {
 			event.preventDefault()
 		}, false)
@@ -219,7 +220,7 @@ function Game(renderer) {
 		if (keysDown[40] || keysDown[74]) {
 			y += max
 		}
-		if (pointers) {
+		if (hasTouch && pointers) {
 			const dx = stickX - pointersX[0],
 				dy = stickY - pointersY[0]
 			stickDelta = dx*dx + dy*dy
@@ -824,7 +825,7 @@ function Game(renderer) {
 		}
 
 		// Virtual touch stick.
-		if (pointers) {
+		if (hasTouch && pointers) {
 			const scale = .5 / Math.max(renderer.xscale, renderer.yscale),
 				size = clamp(1 - stickDelta / .05, .1, 1) * scale * 1.5
 			renderer.push(0, -vx + stickX, -vy + stickY, size, size)
