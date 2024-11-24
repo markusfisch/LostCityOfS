@@ -1,6 +1,6 @@
 "use strict"
 
-function Atlas() {
+function loadAtlas() {
 	function svgToImg(svg, sw, sh, dw, dh) {
 		const img = new Image()
 		img.src = `data:image/svg+xml;base64,${btoa(

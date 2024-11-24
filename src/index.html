@@ -190,8 +190,8 @@ svg {
 	<path style="fill: rgb(212, 165, 71);" d="M 11 68 C 28 79 53 77 63 88 C 43 75 31 92 11 68 Z"/>
 </g>
 <!-- 21: sand to water --><g>
-	<rect width="100" height="100" style="fill: rgb(243, 190, 83);"/>
-	<path d="M 0 0 L 100 0 L 100 53 C 50 71 50 35 0 53 L 0 0 Z" style="fill: rgb(80, 117, 228);"/>
+	<rect width="100" height="100" style="fill: rgb(80, 117, 228);"/>
+	<path style="fill: rgb(243, 190, 82);" d="M 0 37 C 0 37 50 55 100 37 L 100 100 L 0 100 L 0 37 Z"/>
 </g>
 <!-- 22: water --><g>
 	<rect width="100" height="100" style="fill: rgb(80, 117, 228);" y="-1"/>
@@ -236,7 +236,6 @@ svg {
 	<ellipse style="fill: rgba(52, 52, 52, 0.498);" cx="74" cy="56" rx="3" ry="3"/>
 	<ellipse style="fill: rgb(255, 255, 255);" cx="73" cy="55" rx="1" ry="1"/>
 </g>
-</g>
 </svg>
 <script id="VertexShader" type="x-shader/x-vertex">
 attribute vec2 v;
@@ -267,8 +266,10 @@ void main() {
 	gl_FragColor = texture2D(s, u).rgba * m;
 }
 </script>
-<script src="Atlas.js"></script>
-<script src="Renderer.js"></script>
-<script src="Game.js"></script>
+<script src="random.js"></script>
+<script src="maze.js"></script>
+<script src="atlas.js"></script>
+<script src="renderer.js"></script>
+<script src="game.js"></script>
 <script src="main.js"></script>
 </html>

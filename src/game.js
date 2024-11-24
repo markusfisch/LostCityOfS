@@ -14,7 +14,7 @@ function Game(renderer) {
 		shakeDuration = 300,
 		dustLife = 150
 
-	let seed = 1, pointers = 0,
+	let pointers = 0,
 		stickX, stickY, stickDelta, sayId = 0,
 		viewXMin, viewXMax, viewYMin, viewYMax,
 		lookX = mapCols >> 1, lookY = mapRows - 4,
@@ -228,15 +228,15 @@ function Game(renderer) {
 			y = Math.max(-max, Math.min(dy * warp, max))
 		}
 		if (cursed && (x || y)) {
-			x = -x
-			y = -y
+			const mm = max * 4, hm = mm / 2
+			x += Math.random() * mm - hm
+			y += Math.random() * mm - hm
+			if (message.style.display == "none") {
+				const messages = ["Oopsie!", "Whoops!", "Yikes!"]
+				say([messages[Math.floor(Math.random() * messages.length)]])
+			}
 		}
 		moveTo(player, player.x + x, player.y + y, max)
-	}
-
-	function random() {
-		// http://indiegamr.com/generate-repeatable-random-numbers-in-js/
-		return (seed = (seed * 9301 + 49297) % 233280) / 233280
 	}
 
 	// Initialize map.
@@ -250,6 +250,8 @@ function Game(renderer) {
 		{sprite: 19, y: sandRow + 1}, // sand to soil
 		{sprite: 12, y: mapRows}, // soil
 	]
+
+	// Lay out area sprites.
 	for (let y = 0, i = 0, area = 0, a = areas[area]; y < mapRows; ++y) {
 		for (let x = 0; x < mapCols; ++x, ++i) {
 			if (y > a.y) {
@@ -262,6 +264,8 @@ function Game(renderer) {
 			}
 		}
 	}
+
+	// Initialize nodes for path finding.
 	for (let i = 0, y = 0; y < mapRows; ++y) {
 		for (let x = 0; x < mapCols; ++x, ++i) {
 			const neighbors = []
@@ -332,10 +336,13 @@ function Game(renderer) {
 		return dx*dx + dy*dy < 3
 	}
 
-	// Put blocking tiles on the map.
+	// Put blocking tiles on the map. Leave maze area untouched.
+	const mazeTop = waterRow + 6,
+		mazeBottom = Math.min(mazeTop + mapCols, sandRow - 4)
 	for (let y = 0; y < mapRows; ++y) {
 		for (let x = 0; x < mapCols; ++x) {
-			if (random() < .2 && !nearPlayer(x, y)) {
+			if (random() < .2 && !nearPlayer(x, y) &&
+					(y < mazeTop || y > mazeBottom)) {
 				map[offset(x, y)] |= 128
 			}
 		}
@@ -353,6 +360,9 @@ function Game(renderer) {
 		}
 	}
 
+	// Clear area of desert maze, then create the maze.
+	maze(mapCols, mazeTop, mazeBottom, (o) => map[o] |= 128);
+
 	// Set entities over blocking tiles.
 	for (let y = 0; y < mapRows; ++y) {
 		for (let x = 0; x < mapCols; ++x) {
@@ -363,23 +373,18 @@ function Game(renderer) {
 			const o = offset(x, y)
 			if (map[o] & 128) {
 				let sprite
-				if (y < waterRow) {
+				if (y <= waterRow) {
 					sprite = random() < .2 ? 23 : 24
 					map[o] = sprite | 128
 					continue
-				} else if (y == waterRow) {
-					continue
 				} else if (y < sandRow) {
 					sprite = 17
-				} else if (y == sandRow) {
-					continue
 				} else {
 					sprite = random() < .2 ? 18 : 17
 				}
 				entities.push({
 					x: x,
 					y: y + .5,
-					dx: random() > .5 ? 1 : -1,
 					update: () => sprite
 				})
 			}
@@ -560,10 +565,10 @@ function Game(renderer) {
 				e = {
 			x: p.x,
 			y: p.y,
-			sight: 20,
+			sight: 10,
 			attacking: 0,
-			stun: 10,
-			speed: .03 + random() * .01,
+			stun: 9,
+			speed: .02 + random() * .01,
 			lastSpawn: 0,
 			update: function() {
 				hunt(this, player, sandRow, mapRows)
@@ -592,10 +597,10 @@ function Game(renderer) {
 				e = {
 			x: p.x,
 			y: p.y,
-			sight: 20,
+			sight: 3,
 			attacking: 0,
 			stun: 5,
-			speed: .04 + random() * .01,
+			speed: .01 + random() * .005,
 			lastSpawn: 0,
 			update: function() {
 				hunt(this, player, waterRow, sandRow)
@@ -646,6 +651,7 @@ function Game(renderer) {
 		particles.push({
 			vx: .002 + Math.random() * .002,
 			vy: .002 + Math.random() * .002,
+			life: 1000 + Math.round(Math.random() * 2000),
 			update: function() {
 				if (this.x === undefined) {
 					this.x = -renderer.viewX + (Math.random() - .5) * 2
@@ -805,8 +811,9 @@ function Game(renderer) {
 
 		// Push particles.
 		for (let i = particles.length; i--; ) {
-			const e = particles[i]
-			renderer.push(e.update(), e.x, -e.y)
+			const e = particles[i], life = e.life,
+				s = .2 + Math.abs(((now % life) / life) - .5)
+			renderer.push(e.update(), e.x, -e.y, s, s)
 		}
 
 		if (!finish) {

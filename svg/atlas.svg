@@ -661,4 +661,6 @@
   <path style="fill: rgb(168, 168, 168); transform-origin: 67.6159px 39.3882px;" d="M 73 32 L 60 37 L 62 43 L 73 32 Z"/>
   <path style="fill: rgb(168, 168, 168);" d="M 37 48 L 35 59 L 57 61 L 78 56 L 74 47 L 69 56 L 64 49 L 59 58 L 54 49 L 49 58 L 46 49 L 42 55 L 37 48 Z"/>
   <path style="fill: rgb(218, 218, 218);" d="M 23 80 L 28 31 L 43 12 L 31 18 L 20 31 L 14 70 L 23 80 Z"/>
+  <rect width="100" height="100" style="fill: rgb(80, 117, 228);" y="549" x="-660"/>
+  <path d="M -660 587 C -660 587 -610 605 -560 587 L -560 650 L -660 650 L -660 587 Z" style="fill: rgb(243, 190, 82);"/>
 </svg>

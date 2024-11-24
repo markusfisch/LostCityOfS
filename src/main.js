@@ -1,3 +1,3 @@
 "use strict"
 
-window.onload = Atlas
+window.onload = loadAtlas
