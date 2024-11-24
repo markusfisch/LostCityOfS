@@ -9,7 +9,7 @@ seconds.
 A quick running game in 13 kilobytes for [js13kGames][js13kgames] 2024.
 The theme was "[Triskaidekaphobia][triskaidekaphobia]".
 
-Play it [here][play].
+You can play a slightly improved post-compo version [here][play].
 
 Works on your phone, too.
 
@@ -21,5 +21,5 @@ Works on your phone, too.
 
 [js13kgames]: http://js13kgames.com/entries/2024
 [triskaidekaphobia]: https://en.wikipedia.org/wiki/Triskaidekaphobia
-[play]: https://hhsw.de/sites/proto/js13k2024/
+[play]: https://hhsw.de/sites/LostCityOfS
 [esbuild]: https://github.com/evanw/esbuild
